@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
+const { Writable } = require('stream');
 const { generateReportHTML } = require('./report-template');
 
 const app = express();
@@ -12,13 +13,14 @@ app.use(express.static('.'));
 const PORT = process.env.PORT || 3000;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@antprojects.co.za';
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465');
 const SMTP_USER = process.env.SMTP_USER || 'anthony.esmeraldo@gmail.com';
 const SMTP_PASS = process.env.SMTP_PASS || 'jaxdqqdymzfrcvzl';
 
+console.log(`SMTP config: ${SMTP_HOST}:${SMTP_PORT} user=${SMTP_USER}`);
+
 async function generatePDF(data) {
   const PDFDocument = require('pdfkit');
-  const { Writable } = require('stream');
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
@@ -39,18 +41,17 @@ async function generatePDF(data) {
     const GREY = '#666666';
     const W = 515;
 
-    // ── HEADER ──
+    // HEADER
     doc.rect(40, 40, W, 50).fill(BLACK);
     doc.fillColor(ORANGE).font('Helvetica-Bold').fontSize(20)
       .text('Ant | Projects PTY (LTD)', 40, 52, { align: 'center', width: W });
     doc.fillColor('#aaaaaa').font('Helvetica').fontSize(8)
       .text('Renovations | Plumbing | Electrical | 061 026 7185 | admin@antprojects.co.za', 40, 76, { align: 'center', width: W });
 
-    // ── TITLE BAND ──
+    // TITLE
     doc.rect(40, 100, W, 28).fill('#f0f0f0');
     doc.fillColor(ORANGE).font('Helvetica-Bold').fontSize(13)
       .text('GEYSER DAMAGE & INSTALLATION REPORT', 40, 108, { align: 'center', width: W });
-
     doc.fillColor(GREY).font('Helvetica').fontSize(8)
       .text(`REF: ${data.reportRef || '—'}   |   Generated: ${new Date().toLocaleString('en-ZA')}`, 40, 132, { align: 'center', width: W });
 
@@ -58,21 +59,21 @@ async function generatePDF(data) {
 
     const section = (title) => {
       doc.moveDown(0.4);
-      doc.rect(40, doc.y, W, 18).fill(ORANGE);
+      const y = doc.y;
+      doc.rect(40, y, W, 18).fill(ORANGE);
       doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10)
-        .text(title, 48, doc.y - 14);
-      doc.moveDown(0.6);
+        .text(title, 48, y + 4);
+      doc.moveDown(0.8);
     };
 
     const row = (label, value) => {
       if (!value) return;
       const y = doc.y;
       doc.fillColor(GREY).font('Helvetica').fontSize(8).text(label, 48, y, { width: 160 });
-      doc.fillColor(BLACK).font('Helvetica-Bold').fontSize(9).text(value || '—', 220, y, { width: 320 });
+      doc.fillColor(BLACK).font('Helvetica-Bold').fontSize(9).text(String(value), 220, y, { width: 320 });
       doc.moveDown(0.5);
     };
 
-    // ── JOB INFO ──
     section('1. JOB INFORMATION');
     row('Technician', data.techName);
     row('Date', data.jobDate);
@@ -82,7 +83,6 @@ async function generatePDF(data) {
     row('Email', data.clientEmail);
     row('Claim / Insurance No.', data.claimNumber);
 
-    // ── EXISTING GEYSER ──
     section('2. EXISTING GEYSER DETAILS');
     row('Make / Brand', data.bMake);
     row('Serial Number', data.bSerial);
@@ -97,21 +97,18 @@ async function generatePDF(data) {
     row('Geyser Blanket', data.bBlanket);
     row('Notes', data.bNotes);
 
-    // ── RECOMMENDATION ──
     if (data.bRecommendation) {
       section('TECHNICIAN RECOMMENDATION');
       row('Assessment', data.bRecommendation);
       row('Notes', data.bRecNotes);
     }
 
-    // ── DAMAGE ──
     section('3. DAMAGE REPORT');
     row('Primary Cause', data.dCause);
     row('Affected Components', data.dAffected);
     row('Other Areas', data.dOther);
     row('Damage Description', data.dDescription);
 
-    // ── NEW INSTALLATION ──
     section('4. NEW GEYSER INSTALLATION');
     row('Make / Brand', data.aMake);
     row('Serial Number', data.aSerial);
@@ -124,29 +121,39 @@ async function generatePDF(data) {
     row('Installation Checklist', data.aInstallChecklist);
     row('Technician Notes', data.aNotes);
 
-    // ── SIGN OFF ──
     section('5. CLIENT SIGN-OFF');
     row('Client Printed Name', data.clientSigName);
     row('Final Remarks', data.finalRemarks);
 
-    // ── FOOTER ──
+    // FOOTER
     doc.moveDown(1);
-    doc.rect(40, doc.y, W, 1).fill(ORANGE);
+    const footerY = doc.y;
+    doc.rect(40, footerY, W, 1).fill(ORANGE);
     doc.moveDown(0.3);
     doc.fillColor(GREY).font('Helvetica').fontSize(8)
-      .text('Ant | Projects PTY (LTD)  |  061 026 7185  |  admin@antprojects.co.za  |  www.antprojects.co.za', 40, doc.y, { align: 'center', width: W });
+      .text('Ant | Projects PTY (LTD)  |  061 026 7185  |  admin@antprojects.co.za  |  www.antprojects.co.za',
+        40, doc.y, { align: 'center', width: W });
 
     doc.end();
   });
 }
 
 async function sendEmail(pdfBuffer, reportRef, techName) {
+  console.log(`Attempting email to ${ADMIN_EMAIL} via ${SMTP_HOST}:${SMTP_PORT}`);
+
   const transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
+    secure: true,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
+
+  // Verify connection first
+  await transporter.verify();
+  console.log('SMTP connection verified');
 
   const filename = `Geyser-Report-${reportRef}.pdf`;
 
@@ -184,10 +191,11 @@ app.post('/api/send-report', async (req, res) => {
     const pdfBuffer = await generatePDF(data);
     console.log(`PDF generated: ${pdfBuffer.length} bytes`);
     const filename = await sendEmail(pdfBuffer, data.reportRef, data.techName);
-    console.log(`Email sent: ${filename}`);
+    console.log(`Email sent successfully: ${filename}`);
     res.json({ success: true, message: `Report sent to ${ADMIN_EMAIL}`, filename });
   } catch (err) {
-    console.error('Error:', err.message);
+    console.error('FULL ERROR:', err.message);
+    console.error('ERROR CODE:', err.code);
     res.status(500).json({ success: false, message: err.message });
   }
 });
