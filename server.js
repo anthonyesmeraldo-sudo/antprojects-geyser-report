@@ -20,19 +20,17 @@ const SMTP_USER = process.env.SMTP_USER || 'anthony.esmeraldo@gmail.com';
 const SMTP_PASS = process.env.SMTP_PASS || 'jaxdqqdymzfrcvzl';
 
 async function generatePDF(htmlContent) {
+  const chromium = require('@sparticuz/chromium');
+  const puppeteer = require('puppeteer-core');
+
   const tmpFile = path.join(os.tmpdir(), `report-${Date.now()}.html`);
   fs.writeFileSync(tmpFile, htmlContent);
 
-  // Dynamically require puppeteer (full version with bundled Chrome)
-  const puppeteer = require('puppeteer');
   const browser = await puppeteer.launch({
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-    ],
-    headless: 'new',
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
   });
 
   try {
