@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ant Projects — Geyser Damage Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Source+Code+Pro:wght@400;600&family=Play:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Play', Arial, sans-serif;
+  background: #f5f5f0;
+  color: #1a1a1a;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  background: #ffffff;
+  border-bottom: 3px solid #ff9900;
+  padding: 18px 24px 0;
+  text-align: center;
+}
+.header-company {
+  font-family: 'Oswald', sans-serif;
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #1a1a1a;
+  line-height: 1.1;
+}
+.header-company .pipe { color: #ff9900; }
+.header-services {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: 0.5px;
+  margin-top: 6px;
+  line-height: 1.8;
+}
+.header-services .pipe { color: #ff9900; }
+.header-services a { color: #ff9900; text-decoration: underline; }
+.header-divider {
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(to right, #ff9900, #cc7700, #ff9900);
+  margin-top: 10px;
+}
+
+/* ── REPORT TITLE BAND ── */
+.report-title-band {
+  background: #1a1a1a;
+  color: #ff9900;
+  text-align: center;
+  padding: 10px 24px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.report-ref {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 2px;
+  letter-spacing: 1px;
+}
+
+/* ── PROGRESS STEPS ── */
+.progress-bar {
+  display: flex;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.step-tab {
+  flex: 1;
+  min-width: 80px;
+  padding: 10px 4px;
+  text-align: center;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: #999;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.step-tab .step-num {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 2px;
+  font-family: 'Oswald', sans-serif;
+}
+.step-tab.active {
+  color: #ff9900;
+  border-bottom-color: #ff9900;
+  background: #fffaf2;
+}
+.step-tab.done {
+  color: #22c55e;
+  border-bottom-color: #22c55e;
+}
+.step-tab.done .step-num::after { content: ' ✓'; font-size: 10px; }
+
+/* ── FORM SECTIONS ── */
+.section { display: none; padding: 20px 16px; }
+.section.active { display: block; }
+
+.section-heading {
+  font-family: 'Oswald', sans-serif;
+  font-size: 18px;
+  color: #1a1a1a;
+  border-left: 4px solid #ff9900;
+  padding-left: 10px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+.section-sub {
+  font-size: 11px;
+  color: #888;
+  font-family: 'Source Code Pro', monospace;
+  margin-top: 2px;
+}
+
+/* ── FORM FIELDS ── */
+.field-group { margin-bottom: 14px; }
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Source Code Pro', monospace;
+}
+.field-label .req { color: #ff9900; }
+
+input[type="text"],
+input[type="date"],
+input[type="time"],
+input[type="number"],
+input[type="email"],
+input[type="tel"],
+select,
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 4px;
+  font-family: 'Play', Arial, sans-serif;
+  font-size: 14px;
+  color: #1a1a1a;
+  background: #fff;
+  transition: border-color 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #ff9900;
+  box-shadow: 0 0 0 3px rgba(255,153,0,0.12);
+}
+textarea { resize: vertical; min-height: 80px; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* ── RADIO / CHECKBOX ── */
+.radio-group, .check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.radio-btn, .check-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  background: #fff;
+  transition: all 0.15s;
+  user-select: none;
+}
+.radio-btn input, .check-btn input { display: none; }
+.radio-btn.selected, .check-btn.selected {
+  border-color: #ff9900;
+  background: #fffaf2;
+  color: #cc6600;
+  font-weight: 600;
+}
+.radio-btn.selected-bad {
+  border-color: #ef4444;
+  background: #fff5f5;
+  color: #b91c1c;
+}
+
+/* ── DAMAGE CHECKLIST ── */
+.damage-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+.damage-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  background: #fff;
+  transition: all 0.15s;
+}
+.damage-item input { display: none; }
+.damage-item.checked {
+  border-color: #ef4444;
+  background: #fff5f5;
+  color: #b91c1c;
+  font-weight: 600;
+}
+.damage-item .dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #ccc;
+  flex-shrink: 0;
+}
+.damage-item.checked .dot { background: #ef4444; border-color: #ef4444; }
+
+/* ── SEVERITY ── */
+.severity-scale {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.sev-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  font-family: 'Source Code Pro', monospace;
+  transition: all 0.15s;
+  background: #fff;
+}
+.sev-btn[data-sev="1"] { color: #22c55e; }
+.sev-btn[data-sev="2"] { color: #84cc16; }
+.sev-btn[data-sev="3"] { color: #eab308; }
+.sev-btn[data-sev="4"] { color: #f97316; }
+.sev-btn[data-sev="5"] { color: #ef4444; }
+.sev-btn.active[data-sev="1"] { background: #f0fdf4; border-color: #22c55e; }
+.sev-btn.active[data-sev="2"] { background: #f7fee7; border-color: #84cc16; }
+.sev-btn.active[data-sev="3"] { background: #fefce8; border-color: #eab308; }
+.sev-btn.active[data-sev="4"] { background: #fff7ed; border-color: #f97316; }
+.sev-btn.active[data-sev="5"] { background: #fff5f5; border-color: #ef4444; }
+
+/* ── PHOTO UPLOAD ── */
+.photo-upload-zone {
+  border: 2px dashed #d0d0d0;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 6px;
+}
+.photo-upload-zone:hover, .photo-upload-zone.drag-over {
+  border-color: #ff9900;
+  background: #fffaf2;
+}
+.photo-upload-zone .upload-icon { font-size: 28px; margin-bottom: 6px; }
+.photo-upload-zone p { font-size: 13px; color: #888; margin-bottom: 4px; }
+.photo-upload-zone span { font-size: 11px; color: #bbb; }
+.photo-upload-zone input[type="file"] { display: none; }
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+.photo-thumb {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  aspect-ratio: 4/3;
+  border: 1.5px solid #e0e0e0;
+  background: #f0f0f0;
+}
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-thumb .remove-photo {
+  position: absolute;
+  top: 4px; right: 4px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+}
+.photo-thumb .photo-label {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 9px;
+  padding: 3px 6px;
+  font-family: 'Source Code Pro', monospace;
+}
+
+/* ── CONDITION RATING ── */
+.condition-bar {
+  display: flex;
+  height: 36px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1.5px solid #d0d0d0;
+  margin-top: 6px;
+  cursor: pointer;
+}
+.cond-seg {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  transition: all 0.2s;
+  font-family: 'Source Code Pro', monospace;
+}
+.cond-seg:nth-child(1) { background: #dcfce7; color: #16a34a; }
+.cond-seg:nth-child(2) { background: #d1fae5; color: #15803d; }
+.cond-seg:nth-child(3) { background: #fef9c3; color: #a16207; }
+.cond-seg:nth-child(4) { background: #fed7aa; color: #c2410c; }
+.cond-seg:nth-child(5) { background: #fee2e2; color: #b91c1c; }
+.cond-seg.active { opacity: 1; transform: scaleY(1.1); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.3); font-weight: 900; }
+.cond-seg:not(.active) { opacity: 0.45; }
+
+/* ── INFO CARD ── */
+.info-card {
+  background: #fff;
+  border: 1px solid #e8e0d0;
+  border-left: 4px solid #ff9900;
+  border-radius: 4px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.info-card .info-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px;
+  color: #ff9900;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* ── DIVIDER ── */
+.form-divider {
+  height: 1px;
+  background: linear-gradient(to right, #ff9900 30%, #e0d8c8);
+  margin: 18px 0;
+}
+
+/* ── BUTTONS ── */
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  padding-bottom: 40px;
+}
+.btn {
+  flex: 1;
+  padding: 13px;
+  border: none;
+  border-radius: 4px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+.btn-prev {
+  background: #f0f0f0;
+  color: #666;
+  border: 1.5px solid #d0d0d0;
+}
+.btn-next {
+  background: #ff9900;
+  color: #fff;
+  flex: 2;
+}
+.btn-next:hover { background: #e68800; }
+.btn-submit {
+  background: #1a1a1a;
+  color: #ff9900;
+  flex: 2;
+}
+.btn-submit:hover { background: #333; }
+
+/* ── SIGNATURE ── */
+.signature-pad {
+  border: 1.5px solid #d0d0d0;
+  border-radius: 4px;
+  background: #fff;
+  width: 100%;
+  height: 140px;
+  cursor: crosshair;
+  touch-action: none;
+  display: block;
+}
+.sig-clear {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+  font-family: 'Source Code Pro', monospace;
+  color: #888;
+}
+
+/* ── SUMMARY/REPORT PREVIEW ── */
+.report-preview {
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.report-section-block {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.report-section-block:last-child { border-bottom: none; }
+.rsb-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px;
+  color: #ff9900;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rsb-title::after { content: ''; flex: 1; height: 1px; background: #f0d8b0; }
+.rsb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.rsb-item { font-size: 12px; }
+.rsb-item .k { color: #999; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; font-family: 'Source Code Pro', monospace; }
+.rsb-item .v { color: #1a1a1a; font-weight: 600; }
+
+/* ── STATUS BADGE ── */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Source Code Pro', monospace;
+  text-transform: uppercase;
+}
+.badge-ok { background: #dcfce7; color: #16a34a; }
+.badge-warn { background: #fef9c3; color: #a16207; }
+.badge-danger { background: #fee2e2; color: #b91c1c; }
+
+/* ── WATERMARK ── */
+.print-only { display: none; }
+
+@media print {
+  .progress-bar, .btn-row, .step-tab { display: none !important; }
+  .section { display: block !important; page-break-inside: avoid; }
+  .print-only { display: block; }
+  body { background: #fff; }
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #1a1a1a;
+  color: #ff9900;
+  padding: 10px 24px;
+  border-radius: 4px;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  z-index: 999;
+  transition: transform 0.3s;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HEADER ═══════════ -->
+<div class="header">
+  <div class="header-company">
+    Ant <span class="pipe">|</span> Projects PTY (LTD)
+  </div>
+  <div class="header-services">
+    <span class="pipe">|</span> Renovations
+    <span class="pipe">|</span> Plumbing
+    <span class="pipe">|</span> Electrical
+    <span class="pipe">|</span> 061 026 7185
+    <span class="pipe">|</span> Building Maintenance
+    <span class="pipe">|</span> <a href="mailto:admin@antprojects.co.za">admin@antprojects.co.za</a>
+    <span class="pipe">|</span> <a href="http://www.antprojects.co.za">www.antprojects.co.za</a>
+    <span class="pipe">|</span>
+  </div>
+  <div class="header-divider"></div>
+</div>
+
+<!-- ═══════════ TITLE BAND ═══════════ -->
+<div class="report-title-band">
+  Geyser Damage &amp; Installation Report
+  <div class="report-ref" id="ref-display">REF: GDR-<span id="ref-num">------</span></div>
+</div>
+
+<!-- ═══════════ PROGRESS ═══════════ -->
+<div class="progress-bar">
+  <div class="step-tab active" data-step="0"><span class="step-num">1</span>Job Info</div>
+  <div class="step-tab" data-step="1"><span class="step-num">2</span>Before</div>
+  <div class="step-tab" data-step="2"><span class="step-num">3</span>Damage</div>
+  <div class="step-tab" data-step="3"><span class="step-num">4</span>After</div>
+  <div class="step-tab" data-step="4"><span class="step-num">5</span>Sign-off</div>
+</div>
+
+<!-- ═══════════════════════════════════
+     STEP 1 — JOB / TECHNICIAN INFO
+════════════════════════════════════ -->
+<div class="section active" id="step-0">
+  <div class="section-heading">Job Information<div class="section-sub">Technician & client details</div></div>
+
+  <div class="field-group">
+    <label class="field-label">Technician Name <span class="req">*</span></label>
+    <input type="text" id="tech-name" placeholder="Full name">
+  </div>
+
+  <div class="field-row">
+    <div class="field-group">
+      <label class="field-label">Date <span class="req">*</span></label>
+      <input type="date" id="job-date">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Time On Site <span class="req">*</span></label>
+      <input type="time" id="job-time">
+    </div>
+  </div>
+
+  <div class="form-divider"></div>
+
+  <div class="section-heading" style="font-size:15px;">Client Details</div>
+
+  <div class="field-group">
+    <label class="field-label">Property Address <span class="req">*</span></label>
+    <textarea id="site-address" rows="2" placeholder="Street, suburb, city, postal code"></textarea>
+  </div>
+
+  <div class="field-row">
+    <div class="field-group">
+      <label class="field-label">Contact Number</label>
+      <input type="tel" id="client-phone" placeholder="0XX XXX XXXX">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Email</label>
+      <input type="email" id="client-email" placeholder="client@email.com">
+    </div>
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Insurance / Claim Number</label>
+    <input type="text" id="claim-number" placeholder="If applicable">
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-next" onclick="goStep(1)">Next: Geyser Before ›</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     STEP 2 — GEYSER BEFORE
+════════════════════════════════════ -->
+<div class="section" id="step-1">
+  <div class="section-heading">Geyser — Before Installation<div class="section-sub">Capture existing geyser details & photos</div></div>
+
+  <div class="info-card">
+    <div class="info-title">📋 Instructions</div>
+    Capture all existing geyser details and take photos BEFORE any work begins. This is the baseline record.
+  </div>
+
+  <div class="section-heading" style="font-size:14px; margin-top:4px;">Geyser Specifications</div>
+
+  <div class="field-group">
+    <label class="field-label">Make / Brand</label>
+    <select id="b-make">
+      <option value="">— Select —</option>
+      <option>Ariston</option>
+      <option>Kwikot</option>
+      <option>Rheem</option>
+      <option>Franke</option>
+      <option>Edwardian</option>
+      <option>Solar Industries</option>
+      <option>Supercraft</option>
+      <option>Other</option>
+    </select>
+  </div>
+
+  <div class="field-row">
+    <div class="field-group">
+      <label class="field-label">Serial Number</label>
+      <input type="text" id="b-serial" placeholder="Serial No.">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Capacity (Litres)</label>
+      <select id="b-capacity">
+        <option value="">— Select —</option>
+        <option>50L</option>
+        <option>80L</option>
+        <option>100L</option>
+        <option>150L</option>
+        <option>200L</option>
+        <option>250L</option>
+        <option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field-group">
+      <label class="field-label">Geyser Type</label>
+      <select id="b-type">
+        <option value="">— Select —</option>
+        <option>Electric</option>
+        <option>Solar (Flat Panel)</option>
+        <option>Solar (Evacuated Tube)</option>
+        <option>Gas</option>
+        <option>Heat Pump</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Location</label>
+      <select id="b-location">
+        <option value="">— Select —</option>
+        <option>Roof / Ceiling</option>
+        <option>Garage</option>
+        <option>Outside Wall</option>
+        <option>Cupboard / Closet</option>
+        <option>Basement</option>
+        <option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field-group">
+      <label class="field-label">Element Size (kW)</label>
+      <input type="text" id="b-element" placeholder="e.g. 3kW, 4kW">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Approx. Age (Years)</label>
+      <input type="number" id="b-age" placeholder="e.g. 8" min="0" max="50">
+    </div>
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Existing Thermostat Setting (°C)</label>
+    <input type="number" id="b-thermostat" placeholder="e.g. 60" min="40" max="90">
+  </div>
+
+  <div class="form-divider"></div>
+
+  <div class="field-group">
+    <label class="field-label">Pressure Relief Valve Present?</label>
+    <div class="radio-group">
+      <label class="radio-btn" data-group="b-prv" data-val="Yes">
+        <input type="radio" name="b-prv" value="Yes"> ✓ Yes
+      </label>
+      <label class="radio-btn" data-group="b-prv" data-val="No">
+        <input type="radio" name="b-prv" value="No"> ✗ No
+      </label>
+      <label class="radio-btn" data-group="b-prv" data-val="Faulty">
+        <input type="radio" name="b-prv" value="Faulty"> ⚠ Faulty
+      </label>
+    </div>
+    <input type="hidden" id="b-prv">
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Drip Tray Present & in Good Order?</label>
+    <div class="radio-group">
+      <label class="radio-btn" data-group="b-drip" data-val="Yes">
+        <input type="radio" name="b-drip" value="Yes"> ✓ Yes
+      </label>
+      <label class="radio-btn" data-group="b-drip" data-val="No">
+        <input type="radio" name="b-drip" value="No"> ✗ No
+      </label>
+      <label class="radio-btn" data-group="b-drip" data-val="Damaged">
+        <input type="radio" name="b-drip" value="Damaged"> ⚠ Damaged
+      </label>
+    </div>
+    <input type="hidden" id="b-drip">
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Geyser Blanket/Insulation Present?</label>
+    <div class="radio-group">
+      <label class="radio-btn" data-group="b-blanket" data-val="Yes">
+        <input type="radio" name="b-blanket" value="Yes"> ✓ Yes
+      </label>
+      <label class="radio-btn" data-group="b-blanket" data-val="No">
+        <input type="radio" name="b-blanket" value="No"> ✗ No
+      </label>
+    </div>
+    <input type="hidden" id="b-blanket">
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Notes on Existing Geyser</label>
+    <textarea id="b-notes" placeholder="Describe any pre-existing conditions, corrosion, leaks, previous repairs…"></textarea>
+  </div>
+
+  <div class="form-divider"></div>
+
+  <div class="section-heading" style="font-size:14px;">📷 Photos of Damaged Geyser</div>
+
+  <div class="photo-upload-zone" onclick="triggerUpload('before-photos')">
+    <div class="upload-icon">📸</div>
+    <p>Tap to add photos of damaged geyser</p>
+    <span>Damage, leaks, affected areas, close-ups</span>
+    <input type="file" id="before-photos" accept="image/*" multiple onchange="handlePhotos(this,'before')">
+  </div>
+  <div class="photo-grid" id="before-photo-grid"></div>
+
+  <div class="form-divider"></div>
+
+  <div class="section-heading" style="font-size:14px;">🔧 Technician Recommendation</div>
+
+  <div class="field-group">
+    <label class="field-label">Assessment Outcome <span class="req">*</span></label>
+    <select id="b-recommendation" onchange="handleRecommendation(this.value)">
+      <option value="">— Select recommendation —</option>
+      <option value="Beyond Repair — Replace Geyser">Beyond Repair — Replace Geyser</option>
+      <option value="Repairable — Element Replacement Required">Repairable — Element Replacement Required</option>
+      <option value="Repairable — Thermostat Replacement Required">Repairable — Thermostat Replacement Required</option>
+      <option value="Repairable — PRV Replacement Required">Repairable — PRV Replacement Required</option>
+      <option value="Repairable — Pipe / Fitting Repair Required">Repairable — Pipe / Fitting Repair Required</option>
+      <option value="Repairable — Minor Repair Required">Repairable — Minor Repair Required</option>
+      <option value="Electrical Fault — Electrician Required">Electrical Fault — Electrician Required</option>
+      <option value="Structural Damage — Ceiling / Bracket Repair Required">Structural Damage — Ceiling / Bracket Repair Required</option>
+      <option value="Under Warranty — Manufacturer Claim Required">Under Warranty — Manufacturer Claim Required</option>
+      <option value="Insurance Claim — Further Assessment Required">Insurance Claim — Further Assessment Required</option>
+      <option value="Other — See Notes">Other — See Notes</option>
+    </select>
+  </div>
+
+  <div id="recommendation-card" style="display:none; margin-top:4px; margin-bottom:14px; padding:12px 14px; border-radius:4px; font-size:13px; font-family:'Play',sans-serif; line-height:1.6; border-left:4px solid #ccc;"></div>
+
+  <div class="field-group">
+    <label class="field-label">Recommendation Notes</label>
+    <textarea id="b-rec-notes" rows="2" placeholder="Additional notes on your recommendation…"></textarea>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-prev" onclick="goStep(0)">‹ Back</button>
+    <button class="btn btn-next" onclick="goStep(2)">Next: Damage Report ›</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     STEP 3 — DAMAGE REPORT
+════════════════════════════════════ -->
+<div class="section" id="step-2">
+  <div class="section-heading">Damage Report<div class="section-sub">Document all damage found on site</div></div>
+
+  <div class="info-card" style="border-left-color: #ef4444;">
+    <div class="info-title" style="color:#ef4444;">⚠ Important</div>
+    Check all damage carefully. This forms part of the official claim / job record.
+  </div>
+
+  <div class="section-heading" style="font-size:14px;">Cause of Damage</div>
+
+  <div class="field-group">
+    <label class="field-label">Primary Cause <span class="req">*</span></label>
+    <select id="d-cause">
+      <option value="">— Select cause —</option>
+      <option>Burst / Split Tank</option>
+      <option>Element Failure</option>
+      <option>Thermostat Failure</option>
+      <option>PRV (Pressure Relief Valve) Failure</option>
+      <option>Water Hammer</option>
+      <option>High Pressure Damage</option>
+      <option>Corrosion / Rusting</option>
+      <option>Faulty Installation (Previous)</option>
+      <option>Storm / Lightning Damage</option>
+      <option>Flood / Water Ingress</option>
+      <option>Age / End of Life</option>
+      <option>Physical Impact</option>
+      <option>Pipe Burst / Leak</option>
+      <option>Other</option>
+    </select>
+  </div>
+
+  <div class="section-heading" style="font-size:14px;">Affected Components <span style="color:#999;font-size:11px;font-family:'Source Code Pro',monospace;">(select all that apply)</span></div>
+
+  <div class="damage-grid" id="damage-checklist">
+    <label class="damage-item"><input type="checkbox" value="Tank Body"><span class="dot"></span>Tank Body</label>
+    <label class="damage-item"><input type="checkbox" value="Element"><span class="dot"></span>Element</label>
+    <label class="damage-item"><input type="checkbox" value="Thermostat"><span class="dot"></span>Thermostat</label>
+    <label class="damage-item"><input type="checkbox" value="PRV Valve"><span class="dot"></span>PRV Valve</label>
+    <label class="damage-item"><input type="checkbox" value="Inlet Pipe"><span class="dot"></span>Inlet Pipe</label>
+    <label class="damage-item"><input type="checkbox" value="Outlet Pipe"><span class="dot"></span>Outlet Pipe</label>
+    <label class="damage-item"><input type="checkbox" value="Drip Tray"><span class="dot"></span>Drip Tray</label>
+    <label class="damage-item"><input type="checkbox" value="Anode Rod"><span class="dot"></span>Anode Rod</label>
+    <label class="damage-item"><input type="checkbox" value="Electrical Wiring"><span class="dot"></span>Electrical Wiring</label>
+    <label class="damage-item"><input type="checkbox" value="Isolator"><span class="dot"></span>Isolator Switch</label>
+    <label class="damage-item"><input type="checkbox" value="Ceiling / Structure"><span class="dot"></span>Ceiling / Structure</label>
+    <label class="damage-item"><input type="checkbox" value="Brackets / Strapping"><span class="dot"></span>Brackets / Straps</label>
+    <label class="damage-item"><input type="checkbox" value="Insulation Blanket"><span class="dot"></span>Insulation Blanket</label>
+    <label class="damage-item"><input type="checkbox" value="Water Damage (Property)"><span class="dot"></span>Property Water Damage</label>
+  </div>
+
+  <div class="field-group" style="margin-top:12px;">
+    <label class="field-label">Other Affected Areas / Components</label>
+    <input type="text" id="d-other" placeholder="Specify any other components…">
+  </div>
+
+  <div class="form-divider"></div>
+
+  <div class="field-group">
+    <label class="field-label">Damage Description <span class="req">*</span></label>
+    <textarea id="d-description" rows="4" placeholder="Describe the damage in detail — what failed, how extensive, what was affected, safety hazards noted…"></textarea>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-prev" onclick="goStep(1)">‹ Back</button>
+    <button class="btn btn-next" onclick="goStep(3)">Next: After Installation ›</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     STEP 4 — AFTER / NEW INSTALLATION
+════════════════════════════════════ -->
+<div class="section" id="step-3">
+  <div class="section-heading">After — New Geyser Installation<div class="section-sub">New unit details & installation confirmation</div></div>
+
+  <div class="section-heading" style="font-size:14px;">New Geyser Specifications</div>
+
+  <div class="field-group">
+      <label class="field-label">Make / Brand <span class="req">*</span></label>
+      <select id="a-make">
+        <option value="">— Select —</option>
+        <option>Ariston</option>
+        <option>Kwikot</option>
+        <option>Rheem</option>
+        <option>Franke</option>
+        <option>Edwardian</option>
+        <option>Solar Industries</option>
+        <option>Supercraft</option>
+        <option>Other</option>
+      </select>
+  </div>
+
+  <div class="field-row">
+    <div class="field-group">
+      <label class="field-label">Serial Number <span class="req">*</span></label>
+      <input type="text" id="a-serial" placeholder="Serial No.">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Capacity (Litres)</label>
+      <select id="a-capacity">
+        <option value="">— Select —</option>
+        <option>50L</option>
+        <option>80L</option>
+        <option>100L</option>
+        <option>150L</option>
+        <option>200L</option>
+        <option>250L</option>
+        <option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field-group">
+      <label class="field-label">Geyser Type</label>
+      <select id="a-type">
+        <option value="">— Select —</option>
+        <option>Electric</option>
+        <option>Solar (Flat Panel)</option>
+        <option>Solar (Evacuated Tube)</option>
+        <option>Gas</option>
+        <option>Heat Pump</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Element Size (kW)</label>
+      <input type="text" id="a-element" placeholder="e.g. 3kW, 4kW">
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field-group">
+      <label class="field-label">Thermostat Set To (°C)</label>
+      <input type="number" id="a-thermostat" placeholder="e.g. 60" min="40" max="90">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Warranty (Years)</label>
+      <input type="number" id="a-warranty" placeholder="e.g. 5" min="0" max="20">
+    </div>
+  </div>
+
+  <div class="form-divider"></div>
+
+  <div class="section-heading" style="font-size:14px;">Installation Checklist</div>
+
+  <div id="install-checklist">
+    <label class="damage-item" style="margin-bottom:8px; border-color:#d0d0d0;">
+      <input type="checkbox" value="New PRV installed"> <span class="dot" style="background:#e0e0e0;border-color:#ccc"></span> New PRV Valve Installed
+    </label>
+    <label class="damage-item" style="margin-bottom:8px; border-color:#d0d0d0;">
+      <input type="checkbox" value="New drip tray"> <span class="dot" style="background:#e0e0e0;border-color:#ccc"></span> New Drip Tray Fitted
+    </label>
+    <label class="damage-item" style="margin-bottom:8px; border-color:#d0d0d0;">
+      <input type="checkbox" value="Geyser blanket fitted"> <span class="dot" style="background:#e0e0e0;border-color:#ccc"></span> Geyser Blanket / Insulation Fitted
+    </label>
+    <label class="damage-item" style="margin-bottom:8px; border-color:#d0d0d0;">
+      <input type="checkbox" value="Pipes pressure tested"> <span class="dot" style="background:#e0e0e0;border-color:#ccc"></span> Pipes Pressure Tested
+    </label>
+    <label class="damage-item" style="margin-bottom:8px; border-color:#d0d0d0;">
+      <input type="checkbox" value="Electrical connections tested"> <span class="dot" style="background:#e0e0e0;border-color:#ccc"></span> Electrical Connections Tested
+    </label>
+    <label class="damage-item" style="margin-bottom:8px; border-color:#d0d0d0;">
+      <input type="checkbox" value="Isolator switch installed"> <span class="dot" style="background:#e0e0e0;border-color:#ccc"></span> Isolator Switch Checked / Installed
+    </label>
+    <label class="damage-item" style="margin-bottom:8px; border-color:#d0d0d0;">
+      <input type="checkbox" value="System filled and tested"> <span class="dot" style="background:#e0e0e0;border-color:#ccc"></span> System Filled & Leak Tested
+    </label>
+    <label class="damage-item" style="margin-bottom:8px; border-color:#d0d0d0;">
+      <input type="checkbox" value="Area cleaned up"> <span class="dot" style="background:#e0e0e0;border-color:#ccc"></span> Site Cleaned Up
+    </label>
+  </div>
+
+  <div class="field-group" style="margin-top:12px;">
+    <label class="field-label">Materials / Parts Used</label>
+    <textarea id="a-materials" rows="3" placeholder="List any additional materials used, e.g. copper fittings, solder, PTFE tape, pipe sections…"></textarea>
+  </div>
+
+
+  <div class="field-group">
+    <label class="field-label">Technician Notes / Recommendations</label>
+    <textarea id="a-notes" rows="3" placeholder="Any recommendations for the client, follow-up required, items still outstanding…"></textarea>
+  </div>
+
+  <div class="form-divider"></div>
+
+  <div class="section-heading" style="font-size:14px;">📷 Photos — After Installation</div>
+
+  <div class="photo-upload-zone" onclick="triggerUpload('after-photos')">
+    <div class="upload-icon">📸</div>
+    <p>Tap to add AFTER photos</p>
+    <span>Installed unit, label, connections, surroundings</span>
+    <input type="file" id="after-photos" accept="image/*" multiple onchange="handlePhotos(this,'after')">
+  </div>
+  <div class="photo-grid" id="after-photo-grid"></div>
+
+  <div class="btn-row">
+    <button class="btn btn-prev" onclick="goStep(2)">‹ Back</button>
+    <button class="btn btn-next" onclick="goStep(4)">Next: Sign-off ›</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     STEP 5 — SIGN-OFF
+════════════════════════════════════ -->
+<div class="section" id="step-4">
+  <div class="section-heading">Sign-off & Submit<div class="section-sub">Review, sign, and complete the report</div></div>
+
+  <!-- REPORT SUMMARY -->
+  <div class="report-preview" id="report-summary">
+    <div class="report-section-block">
+      <div class="rsb-title">Job Information</div>
+      <div class="rsb-grid" id="sum-job"></div>
+    </div>
+    <div class="report-section-block">
+      <div class="rsb-title">Geyser Before</div>
+      <div class="rsb-grid" id="sum-before"></div>
+    </div>
+    <div class="report-section-block">
+      <div class="rsb-title">Damage Report</div>
+      <div class="rsb-grid" id="sum-damage"></div>
+    </div>
+    <div class="report-section-block">
+      <div class="rsb-title">New Installation</div>
+      <div class="rsb-grid" id="sum-after"></div>
+    </div>
+  </div>
+
+  <div class="form-divider"></div>
+
+  <div class="section-heading" style="font-size:14px;">Client Acknowledgement</div>
+
+  <div class="field-group">
+    <label class="field-label">Client Signature <span class="req">*</span></label>
+    <canvas class="signature-pad" id="client-sig" width="500" height="140"></canvas>
+    <button class="sig-clear" onclick="clearSig('client-sig')">✕ Clear signature</button>
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Client Printed Name</label>
+    <input type="text" id="client-sig-name" placeholder="Client name (print)">
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Final Remarks / Client Comments</label>
+    <textarea id="final-remarks" rows="2" placeholder="Any comments from the client or outstanding issues…"></textarea>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-prev" onclick="goStep(3)">‹ Back</button>
+    <button class="btn" id="btn-send-report" onclick="sendReportToAdmin()" style="background:#ff9900;color:#fff;font-family:'Oswald',sans-serif;font-size:16px;letter-spacing:1px;text-transform:uppercase;flex:2;cursor:pointer;">
+      ✉ Send PDF to Admin
+    </button>
+  </div>
+
+  <div id="email-status" style="display:none;margin-top:8px;padding:14px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:12px;text-align:center;"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+const photos = { before: [], damage: [], after: [] };
+let currentStep = 0;
+const totalSteps = 5;
+
+// ── Generate Report Ref ──
+function genRef() {
+  const d = new Date();
+  const rand = Math.random().toString(36).substr(2,4).toUpperCase();
+  return `GDR-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${rand}`;
+}
+const reportRef = genRef();
+document.getElementById('ref-num').textContent = reportRef.split('GDR-')[1];
+
+// Set today's date and current time
+const now = new Date();
+document.getElementById('job-date').value = now.toISOString().split('T')[0];
+document.getElementById('job-time').value = now.toTimeString().slice(0,5);
+
+// ── Step Navigation ──
+function goStep(n) {
+  document.getElementById('step-' + currentStep).classList.remove('active');
+  document.querySelectorAll('.step-tab').forEach((t, i) => {
+    t.classList.remove('active');
+    if (i < n) t.classList.add('done');
+    else t.classList.remove('done');
+  });
+  currentStep = n;
+  document.getElementById('step-' + n).classList.add('active');
+  document.querySelectorAll('.step-tab')[n].classList.add('active');
+  window.scrollTo(0, 0);
+  if (n === 4) buildSummary();
+}
+
+// ── Radio Buttons ──
+document.querySelectorAll('.radio-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const group = this.dataset.group;
+    document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('selected'));
+    this.classList.add('selected');
+    document.getElementById(group).value = this.dataset.val;
+  });
+});
+
+// ── Damage Checklist ──
+document.querySelectorAll('#damage-checklist .damage-item').forEach(item => {
+  item.addEventListener('click', function() {
+    const cb = this.querySelector('input[type="checkbox"]');
+    cb.checked = !cb.checked;
+    this.classList.toggle('checked', cb.checked);
+  });
+});
+
+// ── Install Checklist (green when checked) ──
+document.querySelectorAll('#install-checklist .damage-item').forEach(item => {
+  item.addEventListener('click', function() {
+    const cb = this.querySelector('input[type="checkbox"]');
+    cb.checked = !cb.checked;
+    if (cb.checked) {
+      this.style.borderColor = '#22c55e';
+      this.style.background = '#f0fdf4';
+      this.style.color = '#16a34a';
+      this.querySelector('.dot').style.background = '#22c55e';
+      this.querySelector('.dot').style.borderColor = '#22c55e';
+    } else {
+      this.style.borderColor = '#d0d0d0';
+      this.style.background = '#fff';
+      this.style.color = '#1a1a1a';
+      this.querySelector('.dot').style.background = '#e0e0e0';
+      this.querySelector('.dot').style.borderColor = '#ccc';
+    }
+  });
+});
+
+// ── Condition Bars ──
+document.querySelectorAll('.condition-bar').forEach(bar => {
+  bar.querySelectorAll('.cond-seg').forEach(seg => {
+    seg.addEventListener('click', function() {
+      bar.querySelectorAll('.cond-seg').forEach(s => s.classList.remove('active'));
+      this.classList.add('active');
+      bar.nextElementSibling.value = this.dataset.val;
+    });
+  });
+});
+
+// ── Recommendation Handler ──
+function handleRecommendation(val) {
+  const card = document.getElementById('recommendation-card');
+  if (!val) { card.style.display = 'none'; return; }
+  const configs = {
+    'Beyond Repair — Replace Geyser': { bg:'#fff5f5', border:'#ef4444', color:'#b91c1c', icon:'🚫', msg:'Geyser is damaged beyond repair. A full replacement is required before the unit can be used safely.' },
+    'Repairable — Element Replacement Required': { bg:'#fff7ed', border:'#f97316', color:'#c2410c', icon:'⚡', msg:'The heating element has failed and requires replacement. The tank and other components are in acceptable condition.' },
+    'Repairable — Thermostat Replacement Required': { bg:'#fff7ed', border:'#f97316', color:'#c2410c', icon:'🌡️', msg:'The thermostat is faulty and requires replacement. Unit is otherwise serviceable.' },
+    'Repairable — PRV Replacement Required': { bg:'#fff7ed', border:'#f97316', color:'#c2410c', icon:'🔧', msg:'The pressure relief valve is faulty or absent and must be replaced before the unit is used.' },
+    'Repairable — Pipe / Fitting Repair Required': { bg:'#fff7ed', border:'#f97316', color:'#c2410c', icon:'🔩', msg:'Pipe or fitting damage has been identified. Repair or replacement of affected pipework is required.' },
+    'Repairable — Minor Repair Required': { bg:'#fefce8', border:'#eab308', color:'#a16207', icon:'🛠️', msg:'Minor repairs are required. The unit is partially functional but should not be used until repaired.' },
+    'Electrical Fault — Electrician Required': { bg:'#fefce8', border:'#eab308', color:'#a16207', icon:'⚠️', msg:'An electrical fault has been identified. A qualified electrician must attend before the unit is operated.' },
+    'Structural Damage — Ceiling / Bracket Repair Required': { bg:'#fefce8', border:'#eab308', color:'#a16207', icon:'🏗️', msg:'Structural damage to the ceiling or mounting brackets has been identified. A builder or contractor is required.' },
+    'Under Warranty — Manufacturer Claim Required': { bg:'#eff6ff', border:'#3b82f6', color:'#1d4ed8', icon:'📋', msg:'This unit may be under warranty. A manufacturer warranty claim should be lodged before repair or replacement.' },
+    'Insurance Claim — Further Assessment Required': { bg:'#eff6ff', border:'#3b82f6', color:'#1d4ed8', icon:'📄', msg:'This damage may be covered by insurance. A formal insurance claim and further assessment is recommended.' },
+    'Other — See Notes': { bg:'#f9fafb', border:'#6b7280', color:'#374151', icon:'📝', msg:'Please refer to the recommendation notes below for details on the technician\'s assessment.' },
+  };
+  const c = configs[val];
+  if (c) {
+    card.style.display = 'block';
+    card.style.background = c.bg;
+    card.style.borderLeftColor = c.border;
+    card.style.color = c.color;
+    card.innerHTML = `<strong>${c.icon} ${val}</strong><br>${c.msg}`;
+  }
+}
+
+// ── Photo Handling ──
+function triggerUpload(id) { document.getElementById(id).click(); }
+
+function handlePhotos(input, category) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      photos[category].push({ src: e.target.result, name: file.name });
+      renderPhotoGrid(category);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderPhotoGrid(category) {
+  const grid = document.getElementById(category + '-photo-grid');
+  grid.innerHTML = '';
+  photos[category].forEach((photo, i) => {
+    const labels = {
+      before: ['Front View','Label/Serial','Connections','Overall','Other'],
+      damage: ['Damage Close-up','Leak Area','Affected Pipe','Structural','Other'],
+      after: ['Installed Unit','Label/Serial','Connections','Overall','Clean-up']
+    };
+    const labelText = labels[category][i] || 'Photo ' + (i + 1);
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.innerHTML = `<img src="${photo.src}" alt="${labelText}">
+      <div class="photo-label">${labelText}</div>
+      <button class="remove-photo" onclick="removePhoto('${category}',${i})">×</button>`;
+    grid.appendChild(div);
+  });
+}
+
+function removePhoto(category, index) {
+  photos[category].splice(index, 1);
+  renderPhotoGrid(category);
+}
+
+// ── Signature Pad ──
+function initSig(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  let drawing = false, lastX = 0, lastY = 0;
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  }
+  function start(e) { e.preventDefault(); drawing = true; const p = getPos(e); lastX = p.x; lastY = p.y; }
+  function draw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const p = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    lastX = p.x; lastY = p.y;
+  }
+  function stop() { drawing = false; }
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stop);
+  canvas.addEventListener('mouseleave', stop);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
+  canvas.addEventListener('touchend', stop);
+}
+
+function clearSig(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+window.addEventListener('load', () => { initSig('client-sig'); });
+
+// ── Summary Builder ──
+function buildSummary() {
+  const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '—';
+
+  function renderItems(containerId, items) {
+    const cont = document.getElementById(containerId);
+    cont.innerHTML = items.map(([k, val]) =>
+      `<div class="rsb-item"><div class="k">${k}</div><div class="v">${val || '—'}</div></div>`
+    ).join('');
+  }
+
+  renderItems('sum-job', [
+    ['Technician', v('tech-name')],
+    ['Date', v('job-date')],
+    ['Time on Site', v('job-time')],
+    
+    
+    ['Claim No.', v('claim-number')],
+    ['Address', v('site-address')],
+    ['Contact', v('client-phone')],
+  ]);
+
+  renderItems('sum-before', [
+    ['Make', v('b-make')],
+    
+    ['Serial', v('b-serial')],
+    ['Capacity', v('b-capacity')],
+    ['Type', v('b-type')],
+    ['Age', v('b-age') !== '—' ? v('b-age') + ' yrs' : '—'],
+    ['PRV', v('b-prv')],
+    ['Drip Tray', v('b-drip')],
+    ['Blanket', v('b-blanket')],
+    ['Recommendation', v('b-recommendation')],
+  ]);
+
+  const checkedDamage = Array.from(document.querySelectorAll('#damage-checklist .damage-item.checked'))
+    .map(el => el.querySelector('input').value).join(', ') || '—';
+
+  renderItems('sum-damage', [
+    ['Cause', v('d-cause')],
+
+    ['Affected', checkedDamage],
+    ['Photos', photos.damage.length + ' captured'],
+  ]);
+
+  const checkedInstall = Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked'))
+    .map(cb => cb.value).join(', ') || '—';
+
+  renderItems('sum-after', [
+    ['New Make', v('a-make')],
+    
+    ['Serial', v('a-serial')],
+    ['Capacity', v('a-capacity')],
+    ['Thermostat', v('a-thermostat') !== '—' ? v('a-thermostat') + '°C' : '—'],
+    ['Warranty', v('a-warranty') !== '—' ? v('a-warranty') + ' yrs' : '—'],
+    ['Checklist', checkedInstall],
+  ]);
+}
+
+// ── Send Report to Admin via Server ──
+async function sendReportToAdmin() {
+  const btn = document.getElementById('btn-send-report');
+  const status = document.getElementById('email-status');
+
+  const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '';
+
+  // Collect all form data
+  const payload = {
+    reportRef,
+    techName: v('tech-name'),
+    jobDate: v('job-date'),
+    jobTime: v('job-time'),
+    siteAddress: v('site-address'),
+    clientPhone: v('client-phone'),
+    clientEmail: v('client-email'),
+    claimNumber: v('claim-number'),
+    bMake: v('b-make'),
+    bSerial: v('b-serial'),
+    bCapacity: v('b-capacity'),
+    bType: v('b-type'),
+    bLocation: v('b-location'),
+    bElement: v('b-element'),
+    bAge: v('b-age'),
+    bThermostat: v('b-thermostat'),
+    bPrv: v('b-prv'),
+    bDrip: v('b-drip'),
+    bBlanket: v('b-blanket'),
+    bNotes: v('b-notes'),
+    bRecommendation: v('b-recommendation'),
+    bRecNotes: v('b-rec-notes'),
+    beforePhotos: photos.before.map(p => p.src),
+    dCause: v('d-cause'),
+    dAffected: Array.from(document.querySelectorAll('#damage-checklist .damage-item.checked'))
+      .map(el => el.querySelector('input').value).join(', '),
+    dOther: v('d-other'),
+    dDescription: v('d-description'),
+    aMake: v('a-make'),
+    aSerial: v('a-serial'),
+    aCapacity: v('a-capacity'),
+    aType: v('a-type'),
+    aElement: v('a-element'),
+    aThermostat: v('a-thermostat'),
+    aWarranty: v('a-warranty'),
+    aMaterials: v('a-materials'),
+    aInstallChecklist: Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked'))
+      .map(cb => cb.value).join(', '),
+    aNotes: v('a-notes'),
+    afterPhotos: photos.after.map(p => p.src),
+    clientSigName: v('client-sig-name'),
+    finalRemarks: v('final-remarks'),
+  };
+
+  // Update button state
+  btn.textContent = '⏳ Generating PDF…';
+  btn.style.opacity = '0.7';
+  btn.disabled = true;
+  status.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/send-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await res.json();
+
+    if (result.success) {
+      status.style.display = 'block';
+      status.style.background = '#f0fdf4';
+      status.style.color = '#16a34a';
+      status.style.border = '1px solid #bbf7d0';
+      status.style.borderRadius = '4px';
+      status.innerHTML = `✔ PDF report sent successfully to admin@antprojects.co.za<br><span style="color:#888;font-size:10px;">Ref: ${reportRef} | ${result.filename}</span>`;
+      showToast('✔ Report sent to admin!');
+    } else {
+      throw new Error(result.message);
+    }
+  } catch (err) {
+    status.style.display = 'block';
+    status.style.background = '#fff5f5';
+    status.style.color = '#b91c1c';
+    status.style.border = '1px solid #fecaca';
+    status.style.borderRadius = '4px';
+    status.innerHTML = `✗ Failed to send report: ${err.message}<br><span style="color:#888;font-size:10px;">Please check your connection and try again.</span>`;
+    showToast('✗ Failed to send report');
+  } finally {
+    btn.textContent = '✉ Send PDF to Admin';
+    btn.style.opacity = '1';
+    btn.disabled = false;
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+</script>
+</body>
+</html>
