@@ -1323,63 +1323,69 @@ function buildSummary() {
 async function sendReportToAdmin() {
   const btn = document.getElementById('btn-send-report');
   const status = document.getElementById('email-status');
-
   const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '';
 
-  // Collect all form data
+  // Get client signature as base64
+  const sigCanvas = document.getElementById('client-sig');
+  const clientSig = sigCanvas ? sigCanvas.toDataURL('image/png') : null;
+
+  // Build payload with all form data
   const payload = {
     reportRef,
-    techName: v('tech-name'),
-    jobDate: v('job-date'),
-    jobTime: v('job-time'),
-    siteAddress: v('site-address'),
-    clientPhone: v('client-phone'),
-    clientEmail: v('client-email'),
-    claimNumber: v('claim-number'),
-    bMake: v('b-make'),
-    bSerial: v('b-serial'),
-    bCapacity: v('b-capacity'),
-    bType: v('b-type'),
-    bLocation: v('b-location'),
-    bElement: v('b-element'),
-    bAge: v('b-age'),
-    bThermostat: v('b-thermostat'),
-    bPrv: v('b-prv'),
-    bDrip: v('b-drip'),
-    bBlanket: v('b-blanket'),
-    bNotes: v('b-notes'),
-    bRecommendation: v('b-recommendation'),
-    bRecNotes: v('b-rec-notes'),
-    beforePhotos: photos.before.map(p => p.src),
-    dCause: v('d-cause'),
-    dAffected: Array.from(document.querySelectorAll('#damage-checklist .damage-item.checked'))
-      .map(el => el.querySelector('input').value).join(', '),
-    dOther: v('d-other'),
-    dDescription: v('d-description'),
-    aMake: v('a-make'),
-    aSerial: v('a-serial'),
-    aCapacity: v('a-capacity'),
-    aType: v('a-type'),
-    aElement: v('a-element'),
-    aThermostat: v('a-thermostat'),
-    aWarranty: v('a-warranty'),
-    aMaterials: v('a-materials'),
-    aInstallChecklist: Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked'))
-      .map(cb => cb.value).join(', '),
-    aNotes: v('a-notes'),
-    afterPhotos: photos.after.map(p => p.src),
-    clientSigName: v('client-sig-name'),
-    finalRemarks: v('final-remarks'),
+    techName:         v('tech-name'),
+    jobDate:          v('job-date'),
+    jobTime:          v('job-time'),
+    siteAddress:      v('site-address'),
+    clientPhone:      v('client-phone'),
+    clientEmail:      v('client-email'),
+    claimNumber:      v('claim-number'),
+    // Before geyser
+    bMake:            v('b-make'),
+    bSerial:          v('b-serial'),
+    bCapacity:        v('b-capacity'),
+    bType:            v('b-type'),
+    bLocation:        v('b-location'),
+    bElement:         v('b-element'),
+    bAge:             v('b-age'),
+    bThermostat:      v('b-thermostat'),
+    bPrv:             v('b-prv'),
+    bDrip:            v('b-drip'),
+    bBlanket:         v('b-blanket'),
+    bNotes:           v('b-notes'),
+    bRecommendation:  v('b-recommendation'),
+    bRecNotes:        v('b-rec-notes'),
+    beforePhotos:     photos.before.map(p => ({ src: p.src, name: p.name })),
+    // Damage
+    dCause:           v('d-cause'),
+    dComponents:      Array.from(document.querySelectorAll('#damage-checklist .damage-item.checked')).map(el => el.querySelector('input').value),
+    dOther:           v('d-other'),
+    dDescription:     v('d-description'),
+    // New installation
+    aMake:            v('a-make'),
+    aSerial:          v('a-serial'),
+    aCapacity:        v('a-capacity'),
+    aType:            v('a-type'),
+    aElement:         v('a-element'),
+    aThermostat:      v('a-thermostat'),
+    aWarranty:        v('a-warranty'),
+    aMaterials:       v('a-materials'),
+    aInstallChecklist: Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked')).map(cb => cb.value),
+    aNotes:           v('a-notes'),
+    afterPhotos:      photos.after.map(p => ({ src: p.src, name: p.name })),
+    // Sign-off
+    clientSig,
+    clientSigName:    v('client-sig-name'),
+    finalRemarks:     v('final-remarks'),
   };
 
   // Update button state
-  btn.textContent = '⏳ Generating PDF…';
+  btn.innerHTML = '⏳ Generating PDF…';
   btn.style.opacity = '0.7';
   btn.disabled = true;
   status.style.display = 'none';
 
   try {
-    const res = await fetch('/api/send-report', {
+    const res = await fetch('https://antprojects-geyser-report.onrender.com/api/send-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1393,21 +1399,24 @@ async function sendReportToAdmin() {
       status.style.color = '#16a34a';
       status.style.border = '1px solid #bbf7d0';
       status.style.borderRadius = '4px';
-      status.innerHTML = `✔ PDF report sent successfully to admin@antprojects.co.za<br><span style="color:#888;font-size:10px;">Ref: ${reportRef} | ${result.filename}</span>`;
+      status.innerHTML = `✔ PDF report sent successfully to admin@antprojects.co.za<br>
+        <span style="color:#888;font-size:10px;">Ref: ${reportRef}</span>`;
       showToast('✔ Report sent to admin!');
     } else {
-      throw new Error(result.message);
+      throw new Error(result.message || 'Unknown server error');
     }
+
   } catch (err) {
     status.style.display = 'block';
     status.style.background = '#fff5f5';
     status.style.color = '#b91c1c';
     status.style.border = '1px solid #fecaca';
     status.style.borderRadius = '4px';
-    status.innerHTML = `✗ Failed to send report: ${err.message}<br><span style="color:#888;font-size:10px;">Please check your connection and try again.</span>`;
+    status.innerHTML = `✗ Failed to send report: ${err.message}<br>
+      <span style="color:#888;font-size:10px;">Check your connection and try again.</span>`;
     showToast('✗ Failed to send report');
   } finally {
-    btn.textContent = '✉ Send PDF to Admin';
+    btn.innerHTML = '✉ Send PDF to Admin';
     btn.style.opacity = '1';
     btn.disabled = false;
   }
