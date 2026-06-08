@@ -2,9 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { generateReportHTML } = require('./report-template');
 
 const app = express();
@@ -19,33 +16,128 @@ const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
 const SMTP_USER = process.env.SMTP_USER || 'anthony.esmeraldo@gmail.com';
 const SMTP_PASS = process.env.SMTP_PASS || 'jaxdqqdymzfrcvzl';
 
-async function generatePDF(htmlContent) {
-  const chromium = require('@sparticuz/chromium');
-  const puppeteer = require('puppeteer-core');
+async function generatePDF(data) {
+  const PDFDocument = require('pdfkit');
+  const { Writable } = require('stream');
 
-  const tmpFile = path.join(os.tmpdir(), `report-${Date.now()}.html`);
-  fs.writeFileSync(tmpFile, htmlContent);
-
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
-  });
-
-  try {
-    const page = await browser.newPage();
-    await page.goto(`file://${tmpFile}`, { waitUntil: 'load' });
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' },
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const chunks = [];
+    const stream = new Writable({
+      write(chunk, encoding, callback) {
+        chunks.push(chunk);
+        callback();
+      }
     });
-    return pdf;
-  } finally {
-    await browser.close();
-    if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
-  }
+
+    doc.pipe(stream);
+    stream.on('finish', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+
+    const ORANGE = '#ff9900';
+    const BLACK = '#1a1a1a';
+    const GREY = '#666666';
+    const W = 515;
+
+    // ── HEADER ──
+    doc.rect(40, 40, W, 50).fill(BLACK);
+    doc.fillColor(ORANGE).font('Helvetica-Bold').fontSize(20)
+      .text('Ant | Projects PTY (LTD)', 40, 52, { align: 'center', width: W });
+    doc.fillColor('#aaaaaa').font('Helvetica').fontSize(8)
+      .text('Renovations | Plumbing | Electrical | 061 026 7185 | admin@antprojects.co.za', 40, 76, { align: 'center', width: W });
+
+    // ── TITLE BAND ──
+    doc.rect(40, 100, W, 28).fill('#f0f0f0');
+    doc.fillColor(ORANGE).font('Helvetica-Bold').fontSize(13)
+      .text('GEYSER DAMAGE & INSTALLATION REPORT', 40, 108, { align: 'center', width: W });
+
+    doc.fillColor(GREY).font('Helvetica').fontSize(8)
+      .text(`REF: ${data.reportRef || '—'}   |   Generated: ${new Date().toLocaleString('en-ZA')}`, 40, 132, { align: 'center', width: W });
+
+    doc.moveDown(0.5);
+
+    const section = (title) => {
+      doc.moveDown(0.4);
+      doc.rect(40, doc.y, W, 18).fill(ORANGE);
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10)
+        .text(title, 48, doc.y - 14);
+      doc.moveDown(0.6);
+    };
+
+    const row = (label, value) => {
+      if (!value) return;
+      const y = doc.y;
+      doc.fillColor(GREY).font('Helvetica').fontSize(8).text(label, 48, y, { width: 160 });
+      doc.fillColor(BLACK).font('Helvetica-Bold').fontSize(9).text(value || '—', 220, y, { width: 320 });
+      doc.moveDown(0.5);
+    };
+
+    // ── JOB INFO ──
+    section('1. JOB INFORMATION');
+    row('Technician', data.techName);
+    row('Date', data.jobDate);
+    row('Time on Site', data.jobTime);
+    row('Property Address', data.siteAddress);
+    row('Contact Number', data.clientPhone);
+    row('Email', data.clientEmail);
+    row('Claim / Insurance No.', data.claimNumber);
+
+    // ── EXISTING GEYSER ──
+    section('2. EXISTING GEYSER DETAILS');
+    row('Make / Brand', data.bMake);
+    row('Serial Number', data.bSerial);
+    row('Capacity', data.bCapacity);
+    row('Type', data.bType);
+    row('Location', data.bLocation);
+    row('Element Size', data.bElement);
+    row('Approximate Age', data.bAge ? data.bAge + ' years' : '');
+    row('Thermostat Setting', data.bThermostat ? data.bThermostat + '°C' : '');
+    row('PRV Status', data.bPrv);
+    row('Drip Tray', data.bDrip);
+    row('Geyser Blanket', data.bBlanket);
+    row('Notes', data.bNotes);
+
+    // ── RECOMMENDATION ──
+    if (data.bRecommendation) {
+      section('TECHNICIAN RECOMMENDATION');
+      row('Assessment', data.bRecommendation);
+      row('Notes', data.bRecNotes);
+    }
+
+    // ── DAMAGE ──
+    section('3. DAMAGE REPORT');
+    row('Primary Cause', data.dCause);
+    row('Affected Components', data.dAffected);
+    row('Other Areas', data.dOther);
+    row('Damage Description', data.dDescription);
+
+    // ── NEW INSTALLATION ──
+    section('4. NEW GEYSER INSTALLATION');
+    row('Make / Brand', data.aMake);
+    row('Serial Number', data.aSerial);
+    row('Capacity', data.aCapacity);
+    row('Type', data.aType);
+    row('Element Size', data.aElement);
+    row('Thermostat Set To', data.aThermostat ? data.aThermostat + '°C' : '');
+    row('Warranty', data.aWarranty ? data.aWarranty + ' years' : '');
+    row('Materials / Parts Used', data.aMaterials);
+    row('Installation Checklist', data.aInstallChecklist);
+    row('Technician Notes', data.aNotes);
+
+    // ── SIGN OFF ──
+    section('5. CLIENT SIGN-OFF');
+    row('Client Printed Name', data.clientSigName);
+    row('Final Remarks', data.finalRemarks);
+
+    // ── FOOTER ──
+    doc.moveDown(1);
+    doc.rect(40, doc.y, W, 1).fill(ORANGE);
+    doc.moveDown(0.3);
+    doc.fillColor(GREY).font('Helvetica').fontSize(8)
+      .text('Ant | Projects PTY (LTD)  |  061 026 7185  |  admin@antprojects.co.za  |  www.antprojects.co.za', 40, doc.y, { align: 'center', width: W });
+
+    doc.end();
+  });
 }
 
 async function sendEmail(pdfBuffer, reportRef, techName) {
@@ -89,8 +181,7 @@ app.post('/api/send-report', async (req, res) => {
   try {
     const data = req.body;
     console.log(`[${new Date().toISOString()}] Generating PDF for ref: ${data.reportRef}`);
-    const html = generateReportHTML(data);
-    const pdfBuffer = await generatePDF(html);
+    const pdfBuffer = await generatePDF(data);
     console.log(`PDF generated: ${pdfBuffer.length} bytes`);
     const filename = await sendEmail(pdfBuffer, data.reportRef, data.techName);
     console.log(`Email sent: ${filename}`);
