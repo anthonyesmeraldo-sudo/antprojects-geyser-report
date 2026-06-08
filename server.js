@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
-const puppeteer = require('puppeteer-core');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -17,16 +16,22 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@antprojects.co.za';
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
-const SMTP_USER = 'anthony.esmeraldo@gmail.com';
-const SMTP_PASS = 'jaxdqqdymzfrcvzl';
-const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const SMTP_USER = process.env.SMTP_USER || 'anthony.esmeraldo@gmail.com';
+const SMTP_PASS = process.env.SMTP_PASS || 'jaxdqqdymzfrcvzl';
+
 async function generatePDF(htmlContent) {
   const tmpFile = path.join(os.tmpdir(), `report-${Date.now()}.html`);
   fs.writeFileSync(tmpFile, htmlContent);
 
+  // Dynamically require puppeteer (full version with bundled Chrome)
+  const puppeteer = require('puppeteer');
   const browser = await puppeteer.launch({
-    executablePath: CHROME_PATH,
-    args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+    ],
     headless: 'new',
   });
 
@@ -41,7 +46,7 @@ async function generatePDF(htmlContent) {
     return pdf;
   } finally {
     await browser.close();
-    fs.unlinkSync(tmpFile);
+    if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
   }
 }
 
@@ -82,7 +87,6 @@ async function sendEmail(pdfBuffer, reportRef, techName) {
   return filename;
 }
 
-// ── API: Send Report ──
 app.post('/api/send-report', async (req, res) => {
   try {
     const data = req.body;
