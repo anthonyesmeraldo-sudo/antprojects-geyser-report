@@ -7,7 +7,7 @@ const { generateReportHTML } = require('./report-template');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
 app.use(express.static('.'));
 
 const PORT = process.env.PORT || 3000;
@@ -124,6 +124,42 @@ async function generatePDF(data) {
     section('5. CLIENT SIGN-OFF');
     row('Client Printed Name', data.clientSigName);
     row('Final Remarks', data.finalRemarks);
+
+    // PHOTOS BEFORE
+    if (data.beforePhotos && data.beforePhotos.length > 0) {
+      section('PHOTOS — DAMAGED GEYSER');
+      let x = 40, y = doc.y;
+      const imgW = 240, imgH = 180, gap = 15;
+      data.beforePhotos.forEach((src, i) => {
+        try {
+          const base64 = src.replace(/^data:image\/\w+;base64,/, '');
+          const buf = Buffer.from(base64, 'base64');
+          if (x + imgW > 555) { x = 40; y += imgH + gap; }
+          doc.image(buf, x, y, { width: imgW, height: imgH, cover: [imgW, imgH] });
+          x += imgW + gap;
+        } catch(e) { console.error('Photo error:', e.message); }
+      });
+      doc.y = y + imgH + gap;
+      doc.moveDown(0.5);
+    }
+
+    // PHOTOS AFTER
+    if (data.afterPhotos && data.afterPhotos.length > 0) {
+      section('PHOTOS — AFTER INSTALLATION');
+      let x = 40, y = doc.y;
+      const imgW = 240, imgH = 180, gap = 15;
+      data.afterPhotos.forEach((src, i) => {
+        try {
+          const base64 = src.replace(/^data:image\/\w+;base64,/, '');
+          const buf = Buffer.from(base64, 'base64');
+          if (x + imgW > 555) { x = 40; y += imgH + gap; }
+          doc.image(buf, x, y, { width: imgW, height: imgH, cover: [imgW, imgH] });
+          x += imgW + gap;
+        } catch(e) { console.error('Photo error:', e.message); }
+      });
+      doc.y = y + imgH + gap;
+      doc.moveDown(0.5);
+    }
 
     // FOOTER
     doc.moveDown(1);
