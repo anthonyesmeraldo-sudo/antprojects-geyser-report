@@ -1047,28 +1047,28 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     <textarea id="final-remarks" rows="2" placeholder="Any comments from the client or outstanding issues…"></textarea>
   </div>
 
-  <div class="btn-row">
-    <button class="btn btn-prev" onclick="goStep(3)">‹ Back</button>
-    <button class="btn" id="btn-send-report" onclick="sendReportToAdmin()" style="background:#ff9900;color:#fff;font-family:'Oswald',sans-serif;font-size:16px;letter-spacing:1px;text-transform:uppercase;flex:2;cursor:pointer;">
-      ✉ Send Report via Email
+  <div class="form-divider"></div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;padding-bottom:40px;">
+
+    <!-- Button 1: Generate PDF -->
+    <button id="btn-generate-pdf" onclick="generatePDFReport(event)" style="padding:14px;background:#1a1a1a;color:#ff9900;border:none;border-radius:4px;font-family:'Oswald',sans-serif;font-size:16px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;">
+      📄 Generate PDF Report
     </button>
+
+    <!-- Button 2: Send via Email -->
+    <button id="btn-share-pdf" onclick="sharePDFReport(event)" style="padding:14px;background:#ff9900;color:#fff;border:none;border-radius:4px;font-family:'Oswald',sans-serif;font-size:16px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;">
+      ✉ Send PDF via Email
+    </button>
+
+    <!-- Button 3: New Report -->
+    <button onclick="createNewReport()" style="padding:14px;background:#f0f0f0;color:#666;border:1.5px solid #d0d0d0;border-radius:4px;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;">
+      ＋ Create New Report
+    </button>
+
   </div>
 
   <div id="email-status" style="display:none;margin-top:8px;padding:14px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:12px;text-align:center;"></div>
-
-  <div class="form-divider"></div>
-
-  <div class="btn-row" style="padding-bottom:10px;">
-    <button class="btn" onclick="createPDFReport()" style="background:#1a1a1a;color:#ff9900;border:none;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase;flex:1;cursor:pointer;">
-      🖨 Create PDF Report
-    </button>
-  </div>
-
-  <div class="btn-row" style="padding-bottom:40px;">
-    <button class="btn" onclick="createNewReport()" style="background:#f0f0f0;color:#666;border:1.5px solid #d0d0d0;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase;flex:1;cursor:pointer;">
-      ＋ Create New Report
-    </button>
-  </div>
 
 </div>
 
@@ -1335,17 +1335,14 @@ function buildSummary() {
   ]);
 }
 
-// ── Create PDF Report (server generated + email) ──
-async function createPDFReport() {
-  const btn = event.target;
+// ── Collect form data ──
+function collectFormData() {
   const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '—';
-
   const checkedDamage = Array.from(document.querySelectorAll('#damage-checklist .damage-item.checked'))
     .map(el => el.querySelector('input').value).join(', ') || '—';
   const checkedInstall = Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked'))
     .map(cb => cb.value).join(', ') || '—';
-
-  const payload = {
+  return {
     reportRef,
     techName: v('tech-name'), jobDate: v('job-date'), jobTime: v('job-time'),
     siteAddress: v('site-address'), clientPhone: v('client-phone'),
@@ -1363,25 +1360,27 @@ async function createPDFReport() {
     aInstallChecklist: checkedInstall, aNotes: v('a-notes'),
     clientSigName: v('client-sig-name'), finalRemarks: v('final-remarks'),
   };
+}
 
-  btn.textContent = '⏳ Generating & Sending PDF…';
-  btn.style.opacity = '0.7';
+// ── Fetch PDF from server as Blob ──
+async function fetchPDFBlob(payload) {
+  const res = await fetch('https://antprojects-geyser-report-zjq1.onrender.com/api/generate-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('Server error — could not generate PDF');
+  return await res.blob();
+}
+
+// ── Button 1: Generate & Download PDF ──
+async function generatePDFReport(e) {
+  const btn = e.target;
+  btn.textContent = '⏳ Generating PDF…';
   btn.disabled = true;
-
-  const statusEl = document.getElementById('email-status');
-  statusEl.style.display = 'none';
-
+  btn.style.opacity = '0.7';
   try {
-    // Step 1 — Download PDF to device
-    const pdfRes = await fetch('https://antprojects-geyser-report-zjq1.onrender.com/api/generate-pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!pdfRes.ok) throw new Error('Failed to generate PDF');
-
-    const blob = await pdfRes.blob();
+    const blob = await fetchPDFBlob(collectFormData());
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1390,174 +1389,78 @@ async function createPDFReport() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
-    // Step 2 — Email PDF to admin via server
-    const emailRes = await fetch('https://antprojects-geyser-report-zjq1.onrender.com/api/send-report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    const emailResult = await emailRes.json();
-
-    if (emailResult.success) {
-      statusEl.style.display = 'block';
-      statusEl.style.background = '#f0fdf4';
-      statusEl.style.color = '#16a34a';
-      statusEl.style.border = '1px solid #bbf7d0';
-      statusEl.style.borderRadius = '4px';
-      statusEl.innerHTML = `✔ PDF downloaded & emailed to admin@antprojects.co.za<br>
-        <span style="color:#888;font-size:10px;">Ref: ${reportRef} | ${emailResult.filename}</span>`;
-      showToast('✔ PDF saved & emailed to admin!');
-    } else {
-      // PDF downloaded but email failed
-      statusEl.style.display = 'block';
-      statusEl.style.background = '#fefce8';
-      statusEl.style.color = '#a16207';
-      statusEl.style.border = '1px solid #fde68a';
-      statusEl.style.borderRadius = '4px';
-      statusEl.innerHTML = `⚠ PDF downloaded but email failed: ${emailResult.message}<br>
-        <span style="color:#888;font-size:10px;">Please use ✉ Send Report via Email button instead.</span>`;
-      showToast('⚠ PDF saved — email failed');
-    }
-
+    showToast('✔ PDF downloaded!');
   } catch (err) {
-    statusEl.style.display = 'block';
-    statusEl.style.background = '#fff5f5';
-    statusEl.style.color = '#b91c1c';
-    statusEl.style.border = '1px solid #fecaca';
-    statusEl.style.borderRadius = '4px';
-    statusEl.innerHTML = `✗ Error: ${err.message}<br>
-      <span style="color:#888;font-size:10px;">Please try again.</span>`;
-    showToast('✗ Failed — please try again');
+    showToast('✗ Failed: ' + err.message);
   } finally {
-    btn.textContent = '🖨 Create PDF Report';
-    btn.style.opacity = '1';
+    btn.textContent = '📄 Generate PDF Report';
     btn.disabled = false;
+    btn.style.opacity = '1';
   }
 }
 
-// ── Create New Report ──
-function createNewReport() {
-  if (confirm('Start a new report? All current data will be cleared.')) {
-    window.location.reload();
-  }
-}
-
-// ── Send Report to Admin via EmailJS ──
-async function sendReportToAdmin() {
-  const btn = document.getElementById('btn-send-report');
+// ── Button 2: Generate PDF & Share via Phone Email ──
+async function sharePDFReport(e) {
+  const btn = e.target;
   const status = document.getElementById('email-status');
-  const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '—';
-
-  const checkedDamage = Array.from(document.querySelectorAll('#damage-checklist .damage-item.checked'))
-    .map(el => el.querySelector('input').value).join(', ') || '—';
-  const checkedInstall = Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked'))
-    .map(cb => cb.value).join(', ') || '—';
-
-  const message = `GEYSER DAMAGE & INSTALLATION REPORT
-REF: ${reportRef}
-Generated: ${new Date().toLocaleString('en-ZA')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-JOB INFORMATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Technician:     ${v('tech-name')}
-Date:           ${v('job-date')}
-Time on Site:   ${v('job-time')}
-Address:        ${v('site-address')}
-Contact:        ${v('client-phone')}
-Claim No:       ${v('claim-number')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXISTING GEYSER
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Make / Brand:   ${v('b-make')}
-Serial No:      ${v('b-serial')}
-Capacity:       ${v('b-capacity')}
-Type:           ${v('b-type')}
-Location:       ${v('b-location')}
-Element Size:   ${v('b-element')}
-Age:            ${v('b-age') !== '—' ? v('b-age') + ' years' : '—'}
-Thermostat:     ${v('b-thermostat') !== '—' ? v('b-thermostat') + '°C' : '—'}
-PRV Status:     ${v('b-prv')}
-Drip Tray:      ${v('b-drip')}
-Blanket:        ${v('b-blanket')}
-Notes:          ${v('b-notes')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TECHNICIAN RECOMMENDATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Assessment:     ${v('b-recommendation')}
-Notes:          ${v('b-rec-notes')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DAMAGE REPORT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Primary Cause:  ${v('d-cause')}
-Affected:       ${checkedDamage}
-Other Areas:    ${v('d-other')}
-Description:    ${v('d-description')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NEW GEYSER INSTALLATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Make / Brand:   ${v('a-make')}
-Serial No:      ${v('a-serial')}
-Capacity:       ${v('a-capacity')}
-Type:           ${v('a-type')}
-Element Size:   ${v('a-element')}
-Thermostat:     ${v('a-thermostat') !== '—' ? v('a-thermostat') + '°C' : '—'}
-Warranty:       ${v('a-warranty') !== '—' ? v('a-warranty') + ' years' : '—'}
-Materials:      ${v('a-materials')}
-Checklist:      ${checkedInstall}
-Notes:          ${v('a-notes')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CLIENT SIGN-OFF
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Client Name:    ${v('client-sig-name')}
-Remarks:        ${v('final-remarks')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Ant | Projects PTY (LTD)
-061 026 7185 | www.antprojects.co.za`;
-
-  btn.textContent = '⏳ Sending Report…';
-  btn.style.opacity = '0.7';
+  btn.textContent = '⏳ Preparing PDF…';
   btn.disabled = true;
+  btn.style.opacity = '0.7';
   status.style.display = 'none';
 
   try {
-    await emailjs.send('service_556988g', 'template_jdbsefp', {
-      name: v('tech-name'),
-      time: `${v('job-date')} ${v('job-time')}`,
-      message: message,
-    });
+    const payload = collectFormData();
+    const blob = await fetchPDFBlob(payload);
+    const filename = `Geyser-Report-${reportRef}.pdf`;
+    const file = new File([blob], filename, { type: 'application/pdf' });
 
-    status.style.display = 'block';
-    status.style.background = '#f0fdf4';
-    status.style.color = '#16a34a';
-    status.style.border = '1px solid #bbf7d0';
-    status.style.borderRadius = '4px';
-    status.innerHTML = `✔ Report sent successfully to admin@antprojects.co.za<br>
-      <span style="color:#888;font-size:10px;">Ref: ${reportRef}</span>`;
-    showToast('✔ Report sent to admin!');
+    // Try Web Share API (works on Android & iOS with email apps)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: `Geyser Report — ${reportRef}`,
+        text: `Geyser Damage & Installation Report\nRef: ${reportRef}\nTechnician: ${payload.techName}\nDate: ${payload.jobDate}`,
+        files: [file],
+      });
+      showToast('✔ PDF shared!');
+    } else {
+      // Fallback: download PDF + open mailto
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
+      setTimeout(() => {
+        const subject = encodeURIComponent(`Geyser Report — ${reportRef} — ${payload.techName}`);
+        const body = encodeURIComponent(`Please find the Geyser Damage Report attached.\n\nRef: ${reportRef}\nTechnician: ${payload.techName}\nDate: ${payload.jobDate}\nAddress: ${payload.siteAddress}`);
+        window.location.href = `mailto:admin@antprojects.co.za?subject=${subject}&body=${body}`;
+      }, 1000);
+
+      status.style.display = 'block';
+      status.style.background = '#fff7ed';
+      status.style.color = '#c2410c';
+      status.style.border = '1px solid #fed7aa';
+      status.style.borderRadius = '4px';
+      status.innerHTML = '📎 PDF downloaded — attach it to the email that just opened.';
+    }
   } catch (err) {
-    console.error('EmailJS error:', err);
-    status.style.display = 'block';
-    status.style.background = '#fff5f5';
-    status.style.color = '#b91c1c';
-    status.style.border = '1px solid #fecaca';
-    status.style.borderRadius = '4px';
-    status.innerHTML = `✗ Failed to send: ${JSON.stringify(err)}<br>
-      <span style="color:#888;font-size:10px;">Please try again.</span>`;
-    showToast('✗ Failed to send report');
+    if (err.name !== 'AbortError') {
+      showToast('✗ Failed: ' + err.message);
+    }
   } finally {
-    btn.textContent = '✉ Send Report to Admin';
-    btn.style.opacity = '1';
+    btn.textContent = '✉ Send PDF via Email';
     btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+}
+
+// ── Button 3: Create New Report ──
+function createNewReport() {
+  if (confirm('Start a new report? All current data will be cleared.')) {
+    window.location.reload();
   }
 }
 
