@@ -130,57 +130,63 @@ async function generatePDF(data) {
       if (!photos || photos.length === 0) return;
 
       const COLS = 3;
-      const imgW = 155;
-      const imgH = 116;
-      const gapX = 10;
-      const gapY = 10;
-      const startX = 40;
-      const pageBottom = doc.page.height - 60;
+      const GAP = 8;
+      const BORDER = 2;
+      const imgW = Math.floor((W - (GAP * (COLS - 1))) / COLS); // ~163px
+      const imgH = Math.floor(imgW * 0.75); // 4:3 ratio ~122px
+      const pageBottom = doc.page.height - doc.page.margins.bottom - 10;
 
-      // Section heading
-      doc.moveDown(0.4);
-      const secY = doc.y;
-      doc.rect(40, secY, W, 18).fill(ORANGE);
+      // Add new page if less than 100px space left
+      if (doc.y + 30 + imgH > pageBottom) doc.addPage();
+
+      // Section heading (absolute position)
+      const secY = doc.y + 6;
+      doc.rect(40, secY, W, 20).fill(ORANGE);
       doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10)
-        .text(title, 48, secY + 4);
-      doc.moveDown(0.6);
+        .text(title, 48, secY + 5, { width: W - 16 });
 
+      let curY = secY + 28; // start photos below heading
       let col = 0;
-      let rowStartY = doc.y;
+      let rowY = curY;
 
       photos.forEach((src) => {
         try {
           const base64 = src.replace(/^data:image\/\w+;base64,/, '');
           const buf = Buffer.from(base64, 'base64');
 
-          // New page if not enough space
-          if (rowStartY + imgH > pageBottom && col === 0) {
+          // New page if not enough room
+          if (col === 0 && rowY + imgH > pageBottom) {
             doc.addPage();
-            rowStartY = 40;
+            rowY = 40;
           }
 
-          const x = startX + col * (imgW + gapX);
-          const y = rowStartY;
+          const x = 40 + col * (imgW + GAP);
+          const y = rowY;
 
-          // Draw border rect
-          doc.rect(x, y, imgW, imgH).stroke('#e0e0e0');
-          // Draw image
-          doc.image(buf, x, y, { width: imgW, height: imgH, cover: [imgW, imgH] });
+          // White background
+          doc.rect(x, y, imgW, imgH).fill('#ffffff');
+          // Photo
+          doc.image(buf, x + BORDER, y + BORDER, {
+            width: imgW - BORDER * 2,
+            height: imgH - BORDER * 2,
+            cover: [imgW - BORDER * 2, imgH - BORDER * 2],
+          });
+          // Border
+          doc.rect(x, y, imgW, imgH).strokeColor('#cccccc').lineWidth(1).stroke();
 
           col++;
           if (col >= COLS) {
             col = 0;
-            rowStartY += imgH + gapY;
+            rowY += imgH + GAP;
           }
         } catch(e) {
           console.error('Photo render error:', e.message);
         }
       });
 
-      // Move cursor below last row
-      if (col > 0) rowStartY += imgH + gapY;
-      doc.y = rowStartY;
-      doc.moveDown(0.5);
+      // Move doc.y past the last row
+      if (col > 0) rowY += imgH + GAP;
+      doc.y = rowY + 10;
     };
 
     photoGrid(data.beforePhotos, 'PHOTOS — DAMAGED GEYSER');
