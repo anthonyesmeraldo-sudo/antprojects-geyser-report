@@ -496,9 +496,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .print-only { display: none; }
 
 @media print {
-  .progress-bar, .btn-row, .step-tab { display: none !important; }
+  .progress-bar, .btn-row, .step-tab, .form-divider, #email-status { display: none !important; }
   .section { display: block !important; page-break-inside: avoid; }
-  .print-only { display: block; }
   body { background: #fff; }
 }
 
@@ -1051,11 +1050,26 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   <div class="btn-row">
     <button class="btn btn-prev" onclick="goStep(3)">‹ Back</button>
     <button class="btn" id="btn-send-report" onclick="sendReportToAdmin()" style="background:#ff9900;color:#fff;font-family:'Oswald',sans-serif;font-size:16px;letter-spacing:1px;text-transform:uppercase;flex:2;cursor:pointer;">
-      ✉ Send PDF to Admin
+      ✉ Send Report via Email
     </button>
   </div>
 
   <div id="email-status" style="display:none;margin-top:8px;padding:14px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:12px;text-align:center;"></div>
+
+  <div class="form-divider"></div>
+
+  <div class="btn-row" style="padding-bottom:10px;">
+    <button class="btn" onclick="createPDFReport()" style="background:#1a1a1a;color:#ff9900;border:none;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase;flex:1;cursor:pointer;">
+      🖨 Create PDF Report
+    </button>
+  </div>
+
+  <div class="btn-row" style="padding-bottom:40px;">
+    <button class="btn" onclick="createNewReport()" style="background:#f0f0f0;color:#666;border:1.5px solid #d0d0d0;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase;flex:1;cursor:pointer;">
+      ＋ Create New Report
+    </button>
+  </div>
+
 </div>
 
 <!-- TOAST -->
@@ -1319,6 +1333,75 @@ function buildSummary() {
     ['Warranty', v('a-warranty') !== '—' ? v('a-warranty') + ' yrs' : '—'],
     ['Checklist', checkedInstall],
   ]);
+}
+
+// ── Create PDF Report (server generated) ──
+async function createPDFReport() {
+  const btn = event.target;
+  const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '—';
+
+  const checkedDamage = Array.from(document.querySelectorAll('#damage-checklist .damage-item.checked'))
+    .map(el => el.querySelector('input').value).join(', ') || '—';
+  const checkedInstall = Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked'))
+    .map(cb => cb.value).join(', ') || '—';
+
+  const payload = {
+    reportRef,
+    techName: v('tech-name'), jobDate: v('job-date'), jobTime: v('job-time'),
+    siteAddress: v('site-address'), clientPhone: v('client-phone'),
+    clientEmail: v('client-email'), claimNumber: v('claim-number'),
+    bMake: v('b-make'), bSerial: v('b-serial'), bCapacity: v('b-capacity'),
+    bType: v('b-type'), bLocation: v('b-location'), bElement: v('b-element'),
+    bAge: v('b-age'), bThermostat: v('b-thermostat'), bPrv: v('b-prv'),
+    bDrip: v('b-drip'), bBlanket: v('b-blanket'), bNotes: v('b-notes'),
+    bRecommendation: v('b-recommendation'), bRecNotes: v('b-rec-notes'),
+    dCause: v('d-cause'), dAffected: checkedDamage,
+    dOther: v('d-other'), dDescription: v('d-description'),
+    aMake: v('a-make'), aSerial: v('a-serial'), aCapacity: v('a-capacity'),
+    aType: v('a-type'), aElement: v('a-element'), aThermostat: v('a-thermostat'),
+    aWarranty: v('a-warranty'), aMaterials: v('a-materials'),
+    aInstallChecklist: checkedInstall, aNotes: v('a-notes'),
+    clientSigName: v('client-sig-name'), finalRemarks: v('final-remarks'),
+  };
+
+  btn.textContent = '⏳ Generating PDF…';
+  btn.style.opacity = '0.7';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('https://antprojects-geyser-report.onrender.com/api/generate-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error('Server error generating PDF');
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Geyser-Report-${reportRef}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✔ PDF downloaded!');
+  } catch (err) {
+    showToast('✗ Failed to generate PDF');
+    alert('Could not generate PDF: ' + err.message);
+  } finally {
+    btn.textContent = '🖨 Create PDF Report';
+    btn.style.opacity = '1';
+    btn.disabled = false;
+  }
+}
+
+// ── Create New Report ──
+function createNewReport() {
+  if (confirm('Start a new report? All current data will be cleared.')) {
+    window.location.reload();
+  }
 }
 
 // ── Send Report to Admin via EmailJS ──
