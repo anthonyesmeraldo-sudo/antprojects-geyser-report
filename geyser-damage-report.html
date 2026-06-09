@@ -1319,107 +1319,106 @@ function buildSummary() {
   ]);
 }
 
-// ── Send Report to Admin via Server ──
-async function sendReportToAdmin() {
+// ── Send Report to Admin via Email App ──
+function sendReportToAdmin() {
   const btn = document.getElementById('btn-send-report');
   const status = document.getElementById('email-status');
-  const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '';
+  const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '—';
 
-  // Get client signature as base64
-  const sigCanvas = document.getElementById('client-sig');
-  const clientSig = sigCanvas ? sigCanvas.toDataURL('image/png') : null;
+  const checkedDamage = Array.from(document.querySelectorAll('#damage-checklist .damage-item.checked'))
+    .map(el => el.querySelector('input').value).join(', ') || '—';
+  const checkedInstall = Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked'))
+    .map(cb => cb.value).join(', ') || '—';
 
-  // Build payload with all form data
-  const payload = {
-    reportRef,
-    techName:         v('tech-name'),
-    jobDate:          v('job-date'),
-    jobTime:          v('job-time'),
-    siteAddress:      v('site-address'),
-    clientPhone:      v('client-phone'),
-    clientEmail:      v('client-email'),
-    claimNumber:      v('claim-number'),
-    // Before geyser
-    bMake:            v('b-make'),
-    bSerial:          v('b-serial'),
-    bCapacity:        v('b-capacity'),
-    bType:            v('b-type'),
-    bLocation:        v('b-location'),
-    bElement:         v('b-element'),
-    bAge:             v('b-age'),
-    bThermostat:      v('b-thermostat'),
-    bPrv:             v('b-prv'),
-    bDrip:            v('b-drip'),
-    bBlanket:         v('b-blanket'),
-    bNotes:           v('b-notes'),
-    bRecommendation:  v('b-recommendation'),
-    bRecNotes:        v('b-rec-notes'),
-    beforePhotos:     photos.before.map(p => ({ src: p.src, name: p.name })),
-    // Damage
-    dCause:           v('d-cause'),
-    dComponents:      Array.from(document.querySelectorAll('#damage-checklist .damage-item.checked')).map(el => el.querySelector('input').value),
-    dOther:           v('d-other'),
-    dDescription:     v('d-description'),
-    // New installation
-    aMake:            v('a-make'),
-    aSerial:          v('a-serial'),
-    aCapacity:        v('a-capacity'),
-    aType:            v('a-type'),
-    aElement:         v('a-element'),
-    aThermostat:      v('a-thermostat'),
-    aWarranty:        v('a-warranty'),
-    aMaterials:       v('a-materials'),
-    aInstallChecklist: Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked')).map(cb => cb.value),
-    aNotes:           v('a-notes'),
-    afterPhotos:      photos.after.map(p => ({ src: p.src, name: p.name })),
-    // Sign-off
-    clientSig,
-    clientSigName:    v('client-sig-name'),
-    finalRemarks:     v('final-remarks'),
-  };
+  const subject = encodeURIComponent(`Geyser Damage Report — ${reportRef} — ${v('tech-name')}`);
 
-  // Update button state
-  btn.innerHTML = '⏳ Generating PDF…';
+  const body = encodeURIComponent(
+`GEYSER DAMAGE & INSTALLATION REPORT
+REF: ${reportRef}
+Generated: ${new Date().toLocaleString('en-ZA')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+JOB INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Technician:     ${v('tech-name')}
+Date:           ${v('job-date')}
+Time on Site:   ${v('job-time')}
+Address:        ${v('site-address')}
+Contact:        ${v('client-phone')}
+Email:          ${v('client-email')}
+Claim No:       ${v('claim-number')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXISTING GEYSER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Make / Brand:   ${v('b-make')}
+Serial No:      ${v('b-serial')}
+Capacity:       ${v('b-capacity')}
+Type:           ${v('b-type')}
+Location:       ${v('b-location')}
+Element Size:   ${v('b-element')}
+Age:            ${v('b-age') !== '—' ? v('b-age') + ' years' : '—'}
+Thermostat:     ${v('b-thermostat') !== '—' ? v('b-thermostat') + '°C' : '—'}
+PRV Status:     ${v('b-prv')}
+Drip Tray:      ${v('b-drip')}
+Blanket:        ${v('b-blanket')}
+Notes:          ${v('b-notes')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECHNICIAN RECOMMENDATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Assessment:     ${v('b-recommendation')}
+Notes:          ${v('b-rec-notes')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DAMAGE REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Primary Cause:  ${v('d-cause')}
+Affected:       ${checkedDamage}
+Other Areas:    ${v('d-other')}
+Description:    ${v('d-description')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEW GEYSER INSTALLATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Make / Brand:   ${v('a-make')}
+Serial No:      ${v('a-serial')}
+Capacity:       ${v('a-capacity')}
+Type:           ${v('a-type')}
+Element Size:   ${v('a-element')}
+Thermostat:     ${v('a-thermostat') !== '—' ? v('a-thermostat') + '°C' : '—'}
+Warranty:       ${v('a-warranty') !== '—' ? v('a-warranty') + ' years' : '—'}
+Materials:      ${v('a-materials')}
+Checklist:      ${checkedInstall}
+Notes:          ${v('a-notes')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CLIENT SIGN-OFF
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Client Name:    ${v('client-sig-name')}
+Remarks:        ${v('final-remarks')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ant | Projects PTY (LTD)
+061 026 7185 | www.antprojects.co.za`
+  );
+
+  btn.textContent = '⏳ Opening email…';
   btn.style.opacity = '0.7';
-  btn.disabled = true;
-  status.style.display = 'none';
 
-  try {
-    const res = await fetch('https://antprojects-geyser-report.onrender.com/api/send-report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+  window.location.href = `mailto:admin@antprojects.co.za?subject=${subject}&body=${body}`;
 
-    const result = await res.json();
-
-    if (result.success) {
-      status.style.display = 'block';
-      status.style.background = '#f0fdf4';
-      status.style.color = '#16a34a';
-      status.style.border = '1px solid #bbf7d0';
-      status.style.borderRadius = '4px';
-      status.innerHTML = `✔ PDF report sent successfully to admin@antprojects.co.za<br>
-        <span style="color:#888;font-size:10px;">Ref: ${reportRef}</span>`;
-      showToast('✔ Report sent to admin!');
-    } else {
-      throw new Error(result.message || 'Unknown server error');
-    }
-
-  } catch (err) {
-    status.style.display = 'block';
-    status.style.background = '#fff5f5';
-    status.style.color = '#b91c1c';
-    status.style.border = '1px solid #fecaca';
-    status.style.borderRadius = '4px';
-    status.innerHTML = `✗ Failed to send report: ${err.message}<br>
-      <span style="color:#888;font-size:10px;">Check your connection and try again.</span>`;
-    showToast('✗ Failed to send report');
-  } finally {
-    btn.innerHTML = '✉ Send PDF to Admin';
+  setTimeout(() => {
+    btn.textContent = '✉ Send Report to Admin';
     btn.style.opacity = '1';
-    btn.disabled = false;
-  }
+    status.style.display = 'block';
+    status.style.background = '#f0fdf4';
+    status.style.color = '#16a34a';
+    status.style.border = '1px solid #bbf7d0';
+    status.style.borderRadius = '4px';
+    status.innerHTML = '✔ Email app opened — tap Send to submit the report.<br><span style="color:#888;font-size:10px;">Recipient: admin@antprojects.co.za</span>';
+    showToast('✔ Email app opened!');
+  }, 1500);
 }
 
 function showToast(msg) {
