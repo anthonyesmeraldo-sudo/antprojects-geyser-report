@@ -1335,7 +1335,7 @@ function buildSummary() {
   ]);
 }
 
-// ── Create PDF Report (server generated) ──
+// ── Create PDF Report (server generated + email) ──
 async function createPDFReport() {
   const btn = event.target;
   const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '—';
@@ -1364,20 +1364,24 @@ async function createPDFReport() {
     clientSigName: v('client-sig-name'), finalRemarks: v('final-remarks'),
   };
 
-  btn.textContent = '⏳ Generating PDF…';
+  btn.textContent = '⏳ Generating & Sending PDF…';
   btn.style.opacity = '0.7';
   btn.disabled = true;
 
+  const statusEl = document.getElementById('email-status');
+  statusEl.style.display = 'none';
+
   try {
-    const res = await fetch('https://antprojects-geyser-report-zjq1.onrender.com/api/generate-pdf', {
+    // Step 1 — Download PDF to device
+    const pdfRes = await fetch('https://antprojects-geyser-report-zjq1.onrender.com/api/generate-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    if (!res.ok) throw new Error('Server error generating PDF');
+    if (!pdfRes.ok) throw new Error('Failed to generate PDF');
 
-    const blob = await res.blob();
+    const blob = await pdfRes.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1386,10 +1390,46 @@ async function createPDFReport() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('✔ PDF downloaded!');
+
+    // Step 2 — Email PDF to admin via server
+    const emailRes = await fetch('https://antprojects-geyser-report-zjq1.onrender.com/api/send-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const emailResult = await emailRes.json();
+
+    if (emailResult.success) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#f0fdf4';
+      statusEl.style.color = '#16a34a';
+      statusEl.style.border = '1px solid #bbf7d0';
+      statusEl.style.borderRadius = '4px';
+      statusEl.innerHTML = `✔ PDF downloaded & emailed to admin@antprojects.co.za<br>
+        <span style="color:#888;font-size:10px;">Ref: ${reportRef} | ${emailResult.filename}</span>`;
+      showToast('✔ PDF saved & emailed to admin!');
+    } else {
+      // PDF downloaded but email failed
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#fefce8';
+      statusEl.style.color = '#a16207';
+      statusEl.style.border = '1px solid #fde68a';
+      statusEl.style.borderRadius = '4px';
+      statusEl.innerHTML = `⚠ PDF downloaded but email failed: ${emailResult.message}<br>
+        <span style="color:#888;font-size:10px;">Please use ✉ Send Report via Email button instead.</span>`;
+      showToast('⚠ PDF saved — email failed');
+    }
+
   } catch (err) {
-    showToast('✗ Failed to generate PDF');
-    alert('Could not generate PDF: ' + err.message);
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#fff5f5';
+    statusEl.style.color = '#b91c1c';
+    statusEl.style.border = '1px solid #fecaca';
+    statusEl.style.borderRadius = '4px';
+    statusEl.innerHTML = `✗ Error: ${err.message}<br>
+      <span style="color:#888;font-size:10px;">Please try again.</span>`;
+    showToast('✗ Failed — please try again');
   } finally {
     btn.textContent = '🖨 Create PDF Report';
     btn.style.opacity = '1';
