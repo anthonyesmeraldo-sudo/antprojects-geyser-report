@@ -1359,6 +1359,8 @@ function collectFormData() {
     aWarranty: v('a-warranty'), aMaterials: v('a-materials'),
     aInstallChecklist: checkedInstall, aNotes: v('a-notes'),
     clientSigName: v('client-sig-name'), finalRemarks: v('final-remarks'),
+    beforePhotos: photos.before.map(p => p.src),
+    afterPhotos: photos.after.map(p => p.src),
   };
 }
 
