@@ -125,41 +125,66 @@ async function generatePDF(data) {
     row('Client Printed Name', data.clientSigName);
     row('Final Remarks', data.finalRemarks);
 
-    // PHOTOS BEFORE
-    if (data.beforePhotos && data.beforePhotos.length > 0) {
-      section('PHOTOS — DAMAGED GEYSER');
-      let x = 40, y = doc.y;
-      const imgW = 240, imgH = 180, gap = 15;
-      data.beforePhotos.forEach((src, i) => {
-        try {
-          const base64 = src.replace(/^data:image\/\w+;base64,/, '');
-          const buf = Buffer.from(base64, 'base64');
-          if (x + imgW > 555) { x = 40; y += imgH + gap; }
-          doc.image(buf, x, y, { width: imgW, height: imgH, cover: [imgW, imgH] });
-          x += imgW + gap;
-        } catch(e) { console.error('Photo error:', e.message); }
-      });
-      doc.y = y + imgH + gap;
-      doc.moveDown(0.5);
-    }
+    // ── PHOTO GRID HELPER ──
+    const photoGrid = (photos, title) => {
+      if (!photos || photos.length === 0) return;
 
-    // PHOTOS AFTER
-    if (data.afterPhotos && data.afterPhotos.length > 0) {
-      section('PHOTOS — AFTER INSTALLATION');
-      let x = 40, y = doc.y;
-      const imgW = 240, imgH = 180, gap = 15;
-      data.afterPhotos.forEach((src, i) => {
+      const COLS = 3;
+      const imgW = 155;
+      const imgH = 116;
+      const gapX = 10;
+      const gapY = 10;
+      const startX = 40;
+      const pageBottom = doc.page.height - 60;
+
+      // Section heading
+      doc.moveDown(0.4);
+      const secY = doc.y;
+      doc.rect(40, secY, W, 18).fill(ORANGE);
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10)
+        .text(title, 48, secY + 4);
+      doc.moveDown(0.6);
+
+      let col = 0;
+      let rowStartY = doc.y;
+
+      photos.forEach((src) => {
         try {
           const base64 = src.replace(/^data:image\/\w+;base64,/, '');
           const buf = Buffer.from(base64, 'base64');
-          if (x + imgW > 555) { x = 40; y += imgH + gap; }
+
+          // New page if not enough space
+          if (rowStartY + imgH > pageBottom && col === 0) {
+            doc.addPage();
+            rowStartY = 40;
+          }
+
+          const x = startX + col * (imgW + gapX);
+          const y = rowStartY;
+
+          // Draw border rect
+          doc.rect(x, y, imgW, imgH).stroke('#e0e0e0');
+          // Draw image
           doc.image(buf, x, y, { width: imgW, height: imgH, cover: [imgW, imgH] });
-          x += imgW + gap;
-        } catch(e) { console.error('Photo error:', e.message); }
+
+          col++;
+          if (col >= COLS) {
+            col = 0;
+            rowStartY += imgH + gapY;
+          }
+        } catch(e) {
+          console.error('Photo render error:', e.message);
+        }
       });
-      doc.y = y + imgH + gap;
+
+      // Move cursor below last row
+      if (col > 0) rowStartY += imgH + gapY;
+      doc.y = rowStartY;
       doc.moveDown(0.5);
-    }
+    };
+
+    photoGrid(data.beforePhotos, 'PHOTOS — DAMAGED GEYSER');
+    photoGrid(data.afterPhotos, 'PHOTOS — AFTER INSTALLATION');
 
     // FOOTER
     doc.moveDown(1);
