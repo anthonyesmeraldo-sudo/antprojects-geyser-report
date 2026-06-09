@@ -200,6 +200,23 @@ app.post('/api/send-report', async (req, res) => {
   }
 });
 
+// ── API: Download PDF ──
+app.post('/api/generate-pdf', async (req, res) => {
+  try {
+    const data = req.body;
+    console.log(`[${new Date().toISOString()}] Generating download PDF for ref: ${data.reportRef}`);
+    const pdfBuffer = await generatePDF(data);
+    console.log(`PDF ready for download: ${pdfBuffer.length} bytes`);
+    const filename = `Geyser-Report-${data.reportRef || 'Report'}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('PDF Error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
