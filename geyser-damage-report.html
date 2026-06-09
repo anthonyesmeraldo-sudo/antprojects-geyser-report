@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Ant Projects — Geyser Damage Report</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Source+Code+Pro:wght@400;600&family=Play:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('MuDY-NNQfSAb-jD2K');</script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1319,8 +1321,8 @@ function buildSummary() {
   ]);
 }
 
-// ── Send Report to Admin via Email App ──
-function sendReportToAdmin() {
+// ── Send Report to Admin via EmailJS ──
+async function sendReportToAdmin() {
   const btn = document.getElementById('btn-send-report');
   const status = document.getElementById('email-status');
   const v = id => (document.getElementById(id) ? document.getElementById(id).value : '') || '—';
@@ -1330,10 +1332,7 @@ function sendReportToAdmin() {
   const checkedInstall = Array.from(document.querySelectorAll('#install-checklist input[type="checkbox"]:checked'))
     .map(cb => cb.value).join(', ') || '—';
 
-  const subject = encodeURIComponent(`Geyser Damage Report — ${reportRef} — ${v('tech-name')}`);
-
-  const body = encodeURIComponent(
-`GEYSER DAMAGE & INSTALLATION REPORT
+  const message = `GEYSER DAMAGE & INSTALLATION REPORT
 REF: ${reportRef}
 Generated: ${new Date().toLocaleString('en-ZA')}
 
@@ -1345,7 +1344,6 @@ Date:           ${v('job-date')}
 Time on Site:   ${v('job-time')}
 Address:        ${v('site-address')}
 Contact:        ${v('client-phone')}
-Email:          ${v('client-email')}
 Claim No:       ${v('claim-number')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1400,25 +1398,44 @@ Remarks:        ${v('final-remarks')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ant | Projects PTY (LTD)
-061 026 7185 | www.antprojects.co.za`
-  );
+061 026 7185 | www.antprojects.co.za`;
 
-  btn.textContent = '⏳ Opening email…';
+  btn.textContent = '⏳ Sending Report…';
   btn.style.opacity = '0.7';
+  btn.disabled = true;
+  status.style.display = 'none';
 
-  window.location.href = `mailto:admin@antprojects.co.za?subject=${subject}&body=${body}`;
+  try {
+    await emailjs.send('service_556988g', 'template_jdbsefp', {
+      name: v('tech-name'),
+      time: `${v('job-date')} ${v('job-time')}`,
+      message: message,
+    });
 
-  setTimeout(() => {
-    btn.textContent = '✉ Send Report to Admin';
-    btn.style.opacity = '1';
     status.style.display = 'block';
     status.style.background = '#f0fdf4';
     status.style.color = '#16a34a';
     status.style.border = '1px solid #bbf7d0';
     status.style.borderRadius = '4px';
-    status.innerHTML = '✔ Email app opened — tap Send to submit the report.<br><span style="color:#888;font-size:10px;">Recipient: admin@antprojects.co.za</span>';
-    showToast('✔ Email app opened!');
-  }, 1500);
+    status.innerHTML = `✔ Report sent successfully to admin@antprojects.co.za<br>
+      <span style="color:#888;font-size:10px;">Ref: ${reportRef}</span>`;
+    showToast('✔ Report sent to admin!');
+
+  } catch (err) {
+    console.error('EmailJS error:', err);
+    status.style.display = 'block';
+    status.style.background = '#fff5f5';
+    status.style.color = '#b91c1c';
+    status.style.border = '1px solid #fecaca';
+    status.style.borderRadius = '4px';
+    status.innerHTML = `✗ Failed to send: ${JSON.stringify(err)}<br>
+      <span style="color:#888;font-size:10px;">Please try again.</span>`;
+    showToast('✗ Failed to send report');
+  } finally {
+    btn.textContent = '✉ Send Report to Admin';
+    btn.style.opacity = '1';
+    btn.disabled = false;
+  }
 }
 
 function showToast(msg) {
